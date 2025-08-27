@@ -48,6 +48,12 @@ public class JwtUtils {
                 .getSubject();
     }
     
+    // НОВЫЙ МЕТОД: добавляем метод getUserNameFromJwtToken
+    public String getUserNameFromJwtToken(String token) {
+        // Поскольку в токене хранится email, возвращаем его же
+        return getEmailFromJwtToken(token);
+    }
+    
     public boolean validateJwtToken(String authToken) {
         try {
             // Новый синтаксис для JJWT 0.12.x
