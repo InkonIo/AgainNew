@@ -18,6 +18,8 @@ import com.chatalyst.backend.Support.dto.UpdateReplyRequest;
 import com.chatalyst.backend.Support.dto.UpdateSupportMessageRequest;
 import com.chatalyst.backend.Support.dto.SupportStatsResponse;
 import com.chatalyst.backend.dto.*;
+import com.chatalyst.backend.security.services.NotificationService;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,14 +42,19 @@ public class SupportMessageService {
     private final SupportMessageRepository supportMessageRepository;
     private final SupportMessageReplyRepository supportMessageReplyRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @PersistenceContext
     private EntityManager em;
 
-    public SupportMessageService(SupportMessageRepository supportMessageRepository, SupportMessageReplyRepository supportMessageReplyRepository, UserRepository userRepository) {
+    public SupportMessageService(SupportMessageRepository supportMessageRepository, 
+                               SupportMessageReplyRepository supportMessageReplyRepository, 
+                               UserRepository userRepository,
+                               NotificationService notificationService) {
         this.supportMessageRepository = supportMessageRepository;
         this.supportMessageReplyRepository = supportMessageReplyRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -71,6 +78,15 @@ public class SupportMessageService {
 
         SupportMessage savedMessage = supportMessageRepository.save(message);
         log.info("Support message created by user {}: {}", userId, savedMessage.getId());
+
+        // Save notification to database instead of sending via WebSocket
+        notificationService.createNotificationForAdmins(
+            "new_message", 
+            "Новое сообщение поддержки", 
+            String.format("Пользователь %s %s создал новое сообщение: %s", 
+                user.getFirstName(), user.getLastName(), savedMessage.getSubject()),
+            savedMessage.getId()
+        );
 
         return SupportMessageResponse.fromEntity(savedMessage);
     }
@@ -127,7 +143,6 @@ public class SupportMessageService {
                 .collect(Collectors.toList());
     }
 
-
     @Transactional(readOnly = true)
     public List<SupportMessageResponse> getMessagesWithAdvancedFilters(
             MessageStatus status, MessagePriority priority, Long adminId,
@@ -136,7 +151,6 @@ public class SupportMessageService {
 
         // Приведение search к строке и обрезка пробелов
         String safeSearch = (search == null || search.isBlank()) ? null : "%" + search.toLowerCase() + "%";
-
 
         List<SupportMessage> messages = supportMessageRepository.findWithAdvancedFilters(
                 status,
@@ -153,7 +167,6 @@ public class SupportMessageService {
                 .map(SupportMessageResponse::fromEntity)
                 .collect(Collectors.toList());
     }
-
 
     @Transactional(readOnly = true)
     public MessageDetailResponse getMessageDetail(Long messageId, Long requesterId) {
@@ -204,6 +217,27 @@ public class SupportMessageService {
         SupportMessageReply savedReply = supportMessageReplyRepository.save(reply);
         log.info("Reply added to message {} by user {}", messageId, senderId);
 
+        // Save notification to database instead of sending via WebSocket
+        if (isAdmin) {
+            // Admin replied - notify the user who created the message
+            notificationService.createNotificationForUser(
+                message.getUser().getId(), 
+                "admin_reply",
+                "Новый ответ от администратора",
+                String.format("Администратор ответил на ваше сообщение: %s", message.getSubject()),
+                messageId
+            );
+        } else {
+            // User replied - notify all admins
+            notificationService.createNotificationForAdmins(
+                "user_reply",
+                "Новый ответ пользователя",
+                String.format("Пользователь %s %s ответил на сообщение: %s", 
+                    sender.getFirstName(), sender.getLastName(), message.getSubject()),
+                messageId
+            );
+        }
+
         return SupportMessageReplyResponse.fromEntity(savedReply);
     }
 
@@ -215,16 +249,20 @@ public class SupportMessageService {
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        boolean isAdmin = admin.getRoles().stream()
-                .anyMatch(role -> role.getName() == RoleName.ROLE_ADMIN);
-
-        if (!isAdmin) {
-            throw new RuntimeException("Only admins can update message status");
-        }
-
+        MessageStatus oldStatus = message.getStatus();
         message.setStatus(request.getStatus());
         SupportMessage savedMessage = supportMessageRepository.save(message);
         log.info("Message {} status updated to {} by admin {}", messageId, request.getStatus(), adminId);
+
+        // Notify user about status change
+        String statusText = getStatusText(request.getStatus());
+        notificationService.createNotificationForUser(
+            message.getUser().getId(), 
+            "status_update",
+            "Статус сообщения изменен",
+            String.format("Статус вашего сообщения '%s' изменен на: %s", message.getSubject(), statusText),
+            messageId
+        );
 
         return SupportMessageResponse.fromEntity(savedMessage);
     }
@@ -237,13 +275,6 @@ public class SupportMessageService {
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        boolean isAdmin = admin.getRoles().stream()
-                .anyMatch(role -> role.getName() == RoleName.ROLE_ADMIN);
-
-        if (!isAdmin) {
-            throw new RuntimeException("Only admins can assign messages");
-        }
-
         message.setAdmin(admin);
         if (message.getStatus() == MessageStatus.OPEN) {
             message.setStatus(MessageStatus.IN_PROGRESS);
@@ -251,6 +282,16 @@ public class SupportMessageService {
 
         SupportMessage savedMessage = supportMessageRepository.save(message);
         log.info("Message {} assigned to admin {}", messageId, adminId);
+
+        // Notify user about assignment
+        notificationService.createNotificationForUser(
+            message.getUser().getId(), 
+            "message_assigned",
+            "Сообщение назначено администратору",
+            String.format("Ваше сообщение '%s' назначено администратору %s %s", 
+                message.getSubject(), admin.getFirstName(), admin.getLastName()),
+            messageId
+        );
 
         return SupportMessageResponse.fromEntity(savedMessage);
     }
@@ -262,13 +303,6 @@ public class SupportMessageService {
 
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
-        boolean isAdmin = admin.getRoles().stream()
-                .anyMatch(role -> role.getName() == RoleName.ROLE_ADMIN);
-
-        if (!isAdmin) {
-            throw new RuntimeException("Only admins can update messages");
-        }
 
         if (request.getSubject() != null) {
             message.setSubject(request.getSubject());
@@ -297,13 +331,6 @@ public class SupportMessageService {
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        boolean isAdmin = admin.getRoles().stream()
-                .anyMatch(role -> role.getName() == RoleName.ROLE_ADMIN);
-
-        if (!isAdmin) {
-            throw new RuntimeException("Only admins can delete messages");
-        }
-
         // Delete all replies first
         supportMessageReplyRepository.deleteByMessageId(messageId);
         // Then delete the message
@@ -319,13 +346,6 @@ public class SupportMessageService {
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        boolean isAdmin = admin.getRoles().stream()
-                .anyMatch(role -> role.getName() == RoleName.ROLE_ADMIN);
-
-        if (!isAdmin) {
-            throw new RuntimeException("Only admins can delete replies");
-        }
-
         supportMessageReplyRepository.delete(reply);
         log.info("Reply {} deleted by admin {}", replyId, adminId);
     }
@@ -337,13 +357,6 @@ public class SupportMessageService {
 
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
-        boolean isAdmin = admin.getRoles().stream()
-                .anyMatch(role -> role.getName() == RoleName.ROLE_ADMIN);
-
-        if (!isAdmin) {
-            throw new RuntimeException("Only admins can update replies");
-        }
 
         reply.setReplyText(request.getReplyText());
         SupportMessageReply savedReply = supportMessageReplyRepository.save(reply);
@@ -391,30 +404,25 @@ public class SupportMessageService {
                 .mapToLong(SupportMessageRepository.StatusPriorityCount::getCount)
                 .sum();
 
-        // --- Statistics by admin ---
-        Map<String, Long> messagesByAdmin = new HashMap<>();
-        List<Object[]> adminCounts = em.createQuery("SELECT COALESCE(CONCAT(m.admin.firstName, ' ', m.admin.lastName), 'UNASSIGNED'), COUNT(m) FROM SupportMessage m GROUP BY m.admin.firstName, m.admin.lastName")
-                .getResultList();
+        // --- Recent activity ---
+        Long recentMessages = supportMessageRepository.countByCreatedAtAfter(weekAgo);
+        Long recentReplies = supportMessageReplyRepository.countByCreatedAtAfter(weekAgo);
 
-        for (Object[] result : adminCounts) {
-            messagesByAdmin.put((String) result[0], (Long) result[1]);
+        // --- Average response time (simplified calculation) ---
+        Double avgResponseTime = supportMessageReplyRepository.findAverageResponseTimeInHours();
+        if (avgResponseTime == null) {
+            avgResponseTime = 0.0;
         }
 
-        // --- Unassigned messages ---
-        Long unassignedMessages = supportMessageRepository.countByAdminIsNull();
-
-        // --- Messages over the last 7 days ---
-        Map<LocalDate, Long> last7DaysStats = new HashMap<>();
-        List<SupportMessageRepository.MessagesByDay> messagesByDays = supportMessageRepository.countByCreatedAtSince(weekAgo);
-
-        // Initialize map with 0 for the last 7 days
-        for (int i = 0; i < 7; i++) {
-            last7DaysStats.put(today.minusDays(i), 0L);
-        }
-
-        // Populate with actual data
-        for (SupportMessageRepository.MessagesByDay item : messagesByDays) {
-            last7DaysStats.put(item.getDate(), item.getCount());
+        // --- Messages by date (last 7 days) ---
+        Map<String, Long> messagesByDate = new HashMap<>();
+        for (int i = 6; i >= 0; i--) {
+            LocalDate date = today.minusDays(i);
+            LocalDateTime startOfDay = date.atStartOfDay();
+            LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
+            
+            Long count = supportMessageRepository.countByCreatedAtBetween(startOfDay, endOfDay);
+            messagesByDate.put(date.format(DateTimeFormatter.ISO_LOCAL_DATE), count);
         }
 
         return SupportStatsResponse.builder()
@@ -425,10 +433,22 @@ public class SupportMessageService {
                 .highPriorityMessages(highPriorityMessages)
                 .mediumPriorityMessages(mediumPriorityMessages)
                 .lowPriorityMessages(lowPriorityMessages)
-                .messagesByAdmin(messagesByAdmin)
-                .unassignedMessages(unassignedMessages)
-                .last7DaysStats(last7DaysStats)
+                .recentMessages(recentMessages)
+                .recentReplies(recentReplies)
+                .averageResponseTimeHours(avgResponseTime)
+                .messagesByDate(messagesByDate)
                 .build();
+    }
+
+    // Helper methods
+
+    private String getStatusText(MessageStatus status) {
+        switch (status) {
+            case OPEN: return "Открыто";
+            case IN_PROGRESS: return "В работе";
+            case CLOSED: return "Закрыто";
+            default: return status.toString();
+        }
     }
 
     private LocalDateTime parseDate(String dateString) {
@@ -436,16 +456,10 @@ public class SupportMessageService {
             return null;
         }
         try {
-            // Try parsing as full date-time first
-            return LocalDateTime.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            return LocalDate.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
         } catch (Exception e) {
-            try {
-                // Fallback to date only, assuming start of day
-                return LocalDate.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE).atStartOfDay();
-            } catch (Exception ex) {
-                log.warn("Failed to parse date: {}", dateString);
-                return null;
-            }
+            log.warn("Failed to parse date: {}", dateString);
+            return null;
         }
     }
 }

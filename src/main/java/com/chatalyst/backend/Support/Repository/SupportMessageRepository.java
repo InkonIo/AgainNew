@@ -27,6 +27,10 @@ public interface SupportMessageRepository extends JpaRepository<SupportMessage, 
     @Query("SELECT COUNT(m) FROM SupportMessage m WHERE m.createdAt BETWEEN :from AND :to")
     Long countByCreatedAtBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
+    // Подсчет сообщений после определенной даты
+    @Query("SELECT COUNT(m) FROM SupportMessage m WHERE m.createdAt >= :date")
+    Long countByCreatedAtAfter(@Param("date") LocalDateTime date);
+
     // Подсчет неназначенных сообщений в диапазоне дат
     @Query("SELECT COUNT(m) FROM SupportMessage m WHERE m.admin IS NULL AND m.createdAt BETWEEN :from AND :to")
     Long countByAdminIsNullAndCreatedAtBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);

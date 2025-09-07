@@ -92,15 +92,7 @@ public class SupportMessageController {
             @RequestParam(required = false) String dateTo,
             Authentication authentication) {
         try {
-            // Проверяем что пользователь админ
-            UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
-            boolean isAdmin = userPrincipal.getAuthorities().stream()
-                    .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
 
-            if (!isAdmin) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(new MessageResponse("Error: Admin access required"));
-            }
 
             List<SupportMessageResponse> messages = supportMessageService.getMessagesWithAdvancedFilters(
                     status, priority, adminId, search, sortBy, sortDirection, dateFrom, dateTo);

@@ -24,7 +24,7 @@ public class PsObjectStorageConfig {
     @Bean
 public S3Client s3Client() {
     return S3Client.builder()
-            .endpointOverride(URI.create(endpointUrl))  // https://object.pscloud.io
+            .endpointOverride(URI.create(endpointUrl)) 
             .credentialsProvider(StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(accessKeyId, secretAccessKey)))
             .region(Region.US_EAST_1) // или нужный регион

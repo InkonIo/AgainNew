@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -22,5 +23,28 @@ public interface SupportMessageReplyRepository extends JpaRepository<SupportMess
     
     @Query("SELECT r FROM SupportMessageReply r WHERE r.message.id = :messageId ORDER BY r.createdAt ASC")
     List<SupportMessageReply> findRepliesByMessageId(@Param("messageId") Long messageId);
+    
+    // Подсчет ответов после определенной даты
+    @Query("SELECT COUNT(r) FROM SupportMessageReply r WHERE r.createdAt >= :date")
+    Long countByCreatedAtAfter(@Param("date") LocalDateTime date);
+    
+    // Средний время ответа в часах
+    @Query("""
+        SELECT AVG(TIMESTAMPDIFF(HOUR, m.createdAt, r.createdAt))
+        FROM SupportMessageReply r
+        JOIN r.message m
+        WHERE r.isAdminReply = true
+        AND r.createdAt >= :since
+    """)
+    Double findAverageResponseTimeInHours(@Param("since") LocalDateTime since);
+    
+    // Средний время ответа в часах (без параметра даты)
+    @Query("""
+        SELECT AVG(TIMESTAMPDIFF(HOUR, m.createdAt, r.createdAt))
+        FROM SupportMessageReply r
+        JOIN r.message m
+        WHERE r.isAdminReply = true
+    """)
+    Double findAverageResponseTimeInHours();
 }
 

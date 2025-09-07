@@ -24,21 +24,20 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class SecurityConfig {
-    
+
     private final UserDetailsServiceImpl userDetailsService;
     private final AuthEntryPointJwt unauthorizedHandler;
     private final AuthTokenFilter authTokenFilter;
-    
+
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
-    
+
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
@@ -46,17 +45,17 @@ public class SecurityConfig {
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
-    
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
-    
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-    
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -65,15 +64,10 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
             .authorizeHttpRequests(auth -> auth
+                // Публичные эндпоинты
                 .requestMatchers(
                     "/api/auth/**",
                     "/webhook/telegram",
-                    "/api/support/messages",           // POST create message без токена
-                    "/api/support/messages/{id}",     // GET детали тикета без токена
-                    "/api/support/messages/{id}/status", // PUT update message status
-                    "/api/support/messages/{id}/assign", // PUT assign message
-                    "/api/support/messages/{id}/replies", // POST add reply
-                    "/api/support/replies/{id}", // PUT/DELETE reply
                     "/telegram/webhook/**",
                     "/api/telegram/webhook/**",
                     "/swagger-ui/**",
@@ -86,16 +80,26 @@ public class SecurityConfig {
                     "/favicon.ico",
                     "/"
                 ).permitAll()
-                // Админские эндпоинты требуют аутентификации и роли ADMIN
-                .requestMatchers("/api/support/admin/**").
-                                hasRole("ADMIN")
-                .requestMatchers("/api/support/messages/{id}/status", 
-                                "/api/support/messages/{id}/assign", 
-                                "/api/support/messages/{id}/replies", 
-                                "/api/support/replies/{id}")
-                .authenticated()
-                .anyRequest()
-                .authenticated()
+                
+                // Эндпоинты для обычных пользователей
+                .requestMatchers("/api/support/messages/my").authenticated()
+                .requestMatchers("/api/support/messages").authenticated()
+                .requestMatchers("/api/support/messages/{id}").authenticated()
+                .requestMatchers("/api/support/messages/{id}/replies").authenticated()
+                .requestMatchers("/api/notifications/**").authenticated()
+                
+                // Админские эндпоинты
+                .requestMatchers("/api/support/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/admin/users/**").hasRole("ADMIN")
+                .requestMatchers(
+                    "/api/support/messages",
+                    "/api/support/messages/*/status",
+                    "/api/support/messages/*/assign",
+                    "/api/support/replies/**"
+                ).hasRole("ADMIN")
+                
+                // Остальные эндпоинты требуют аутентификации
+                .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider());
 
@@ -103,7 +107,7 @@ public class SecurityConfig {
 
         return http.build();
     }
-    
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -112,9 +116,10 @@ public class SecurityConfig {
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 }
+

@@ -78,4 +78,8 @@ private LocalDateTime subscriptionStart; // Дата начала тарифа
 private LocalDateTime subscriptionEnd; // Дата окончания тарифа
 // ============================
 
+@Column(nullable = false)
+private Boolean active = true;
+
+
 }
