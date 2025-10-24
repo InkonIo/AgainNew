@@ -22,6 +22,8 @@ import com.chatalyst.backend.model.Product;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -29,6 +31,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashSet;
 import java.util.List;
@@ -69,7 +72,16 @@ public class AuthService {
                 .collect(Collectors.toList());
 
         // Определяем основную роль для localStorage
-        String primaryRole = roles.contains("ROLE_ADMIN") ? "admin" : "user";
+        String primaryRole;
+        if (roles.contains("ROLE_ADMIN")) {
+            primaryRole = "admin";
+        } else if (roles.contains("ROLE_PREMIUM")) {
+            primaryRole = "premium";
+        } else if (roles.contains("ROLE_STANDARD")) {
+            primaryRole = "standard";
+        } else {
+            primaryRole = "user";
+        }
 
         return new JwtResponse(jwt, userPrincipal.getId(), userPrincipal.getEmail(),
                 userPrincipal.getFirstName(), userPrincipal.getLastName(), roles, primaryRole);
@@ -103,29 +115,25 @@ public class AuthService {
         return userRepository.findByEmail(email).isPresent();
     }
 
-    /**
-     * Handles the password reset request.
-     * Generates a 6-digit code and sends it via email to the user.
-     * @param email The email of the user requesting a password reset.
-     * @throws RuntimeException if the user is not found.
-     */
-    @Transactional
+        @Transactional
     public void requestPasswordReset(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Error: User with this email not found!"));
-
+    
         // Удаляем все существующие токены сброса пароля для этого пользователя
         passwordResetTokenRepository.deleteByUser(user);
-
+        passwordResetTokenRepository.flush(); // <-- добавь эту строку
+    
         // Создаем новый токен (6-значный код)
         PasswordResetToken token = new PasswordResetToken(user);
         passwordResetTokenRepository.save(token);
-
+    
         // Отправляем email с кодом
         emailService.sendPasswordResetCode(user, token.getToken());
-
+    
         log.info("Password reset code generated and email sent for user: {}", email);
     }
+
 
     /**
      * Resets the user's password using a valid 6-digit code.
@@ -135,28 +143,26 @@ public class AuthService {
      */
     @Transactional
     public void resetPassword(String code, String newPassword) {
-        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(code) // Ищем по коду
-                .orElseThrow(() -> new RuntimeException("Error: Invalid or expired password reset code!"));
+    PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(code)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired password reset code"));
 
-        if (resetToken.isExpired()) {
-            passwordResetTokenRepository.delete(resetToken); // Удаляем просроченный токен
-            throw new RuntimeException("Error: Password reset code has expired!");
-        }
-
-        User user = resetToken.getUser();
-        if (user == null) {
-            throw new RuntimeException("Error: User associated with this code not found!");
-        }
-
-        // Обновляем пароль пользователя
-        user.setPassword(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
-
-        // Удаляем токен после использования
+    if (resetToken.isExpired()) {
         passwordResetTokenRepository.delete(resetToken);
-
-        log.info("Password successfully reset for user: {}", user.getEmail());
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password reset code has expired");
     }
+
+    User user = resetToken.getUser();
+    if (user == null) {
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User associated with this code not found");
+    }
+
+    user.setPassword(passwordEncoder.encode(newPassword));
+    userRepository.save(user);
+
+    passwordResetTokenRepository.delete(resetToken);
+
+    log.info("Password successfully reset for user: {}", user.getEmail());
+}
 
     /**
      * Changes the password for an authenticated user.

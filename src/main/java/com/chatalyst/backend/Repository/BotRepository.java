@@ -21,4 +21,5 @@ public interface BotRepository extends JpaRepository<Bot, Long> {
 
     // Новый метод: Найти бота по его Telegram API ID
     Optional<Bot> findByTelegramBotApiId(Long telegramBotApiId);
+    long countByOwner(User owner);
 }

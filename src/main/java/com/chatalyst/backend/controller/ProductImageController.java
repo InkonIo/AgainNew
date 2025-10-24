@@ -44,7 +44,7 @@ public class ProductImageController {
      * @return URL загруженного изображения.
      */
     @PostMapping("/upload")
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Загрузить изображение товара", 
                description = "Загружает изображение товара в PS.kz Object Storage и возвращает URL.")
     @ApiResponses(value = {
@@ -103,7 +103,7 @@ public class ProductImageController {
      * @return Результат операции удаления.
      */
     @DeleteMapping
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Удалить изображение товара", 
                description = "Удаляет изображение товара из PS.kz Object Storage.")
     @ApiResponses(value = {
@@ -148,7 +148,7 @@ public class ProductImageController {
      * @return Результат проверки доступности.
      */
     @GetMapping("/check")
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Проверить доступность изображения", 
                description = "Проверяет, доступно ли изображение по указанному URL.")
     @ApiResponses(value = {

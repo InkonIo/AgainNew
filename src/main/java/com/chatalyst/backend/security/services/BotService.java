@@ -56,40 +56,50 @@ public class BotService {
      */
     @Transactional
     public Bot createBot(CreateBotRequest createBotRequest, Long userId) {
-        // 1. Проверяем, существует ли пользователь
-        User owner = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Пользователь не найден с ID: " + userId));
+    // 1. Проверяем, существует ли пользователь
+    User owner = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("Пользователь не найден с ID: " + userId));
 
-        // 2. Проверяем, не существует ли уже бот с таким botIdentifier или accessToken
-        if (botRepository.findByBotIdentifier(createBotRequest.getBotIdentifier()).isPresent()) {
-            throw new RuntimeException("Бот с таким идентификатором уже существует.");
-        }
-        if (botRepository.findByAccessToken(createBotRequest.getAccessToken()).isPresent()) {
-            throw new RuntimeException("Бот с таким токеном доступа уже зарегистрирован.");
-        }
-
-        // 3. Валидация токена Telegram через getMe API
-        JsonNode botInfo = validateTelegramBotToken(createBotRequest.getAccessToken(), createBotRequest.getBotIdentifier());
-        Long telegramBotApiId = botInfo.path("id").asLong(); // Получаем ID бота от Telegram
-
-        // 4. Создаем и сохраняем сущность Bot
-        Bot newBot = new Bot();
-        newBot.setName(createBotRequest.getName());
-        newBot.setBotIdentifier(createBotRequest.getBotIdentifier());
-        newBot.setPlatform(createBotRequest.getPlatform());
-        newBot.setAccessToken(createBotRequest.getAccessToken());
-        newBot.setTelegramBotApiId(telegramBotApiId); // Сохраняем Telegram API ID
-        newBot.setOwner(owner);
-        newBot.setDescription(createBotRequest.getDescription()); // Сохраняем описание
-
-        Bot savedBot = botRepository.save(newBot);
-        log.info("Бот сохранен в БД: {}", savedBot.getName());
-
-        // 5. Устанавливаем Webhook для нового бота
-        setTelegramWebhook(savedBot.getAccessToken(), savedBot.getBotIdentifier());
-
-        return savedBot;
+        long existingBots = botRepository.countByOwner(owner);
+    if (existingBots >= owner.getBotsAllowed()) {
+        throw new RuntimeException("Вы достигли лимита ботов для вашей подписки. Купите тариф, чтобы создать больше ботов.");
     }
+
+    // 🔹 Очищаем токен
+    String rawToken = createBotRequest.getAccessToken().trim();
+    String cleanedToken = rawToken.startsWith("bot") ? rawToken.substring(3) : rawToken;
+
+    // 2. Проверяем, не существует ли уже бот с таким botIdentifier или accessToken
+    if (botRepository.findByBotIdentifier(createBotRequest.getBotIdentifier()).isPresent()) {
+        throw new RuntimeException("Бот с таким идентификатором уже существует.");
+    }
+    if (botRepository.findByAccessToken(cleanedToken).isPresent()) {
+        throw new RuntimeException("Бот с таким токеном доступа уже зарегистрирован.");
+    }
+
+    // 3. Валидация токена Telegram через getMe API
+    JsonNode botInfo = validateTelegramBotToken(cleanedToken, createBotRequest.getBotIdentifier());
+    Long telegramBotApiId = botInfo.path("id").asLong(); // Получаем ID бота от Telegram
+
+    // 4. Создаем и сохраняем сущность Bot
+    Bot newBot = new Bot();
+    newBot.setName(createBotRequest.getName());
+    newBot.setBotIdentifier(createBotRequest.getBotIdentifier());
+    newBot.setPlatform(createBotRequest.getPlatform());
+    newBot.setAccessToken(cleanedToken); // ✅ сохраняем очищенный токен
+    newBot.setTelegramBotApiId(telegramBotApiId);
+    newBot.setOwner(owner);
+    newBot.setDescription(createBotRequest.getDescription());
+
+    Bot savedBot = botRepository.save(newBot);
+    log.info("Бот сохранен в БД: {}", savedBot.getName());
+
+    // 5. Устанавливаем Webhook для нового бота
+    setTelegramWebhook(savedBot.getAccessToken(), savedBot.getBotIdentifier());
+
+    return savedBot;
+}
+
 
     /**
      * Валидирует токен Telegram бота, вызывая метод getMe.

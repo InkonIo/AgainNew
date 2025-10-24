@@ -64,40 +64,49 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
             .authorizeHttpRequests(auth -> auth
-                // Публичные эндпоинты
+                // Публичные эндпоинты (не требуют авторизации)
                 .requestMatchers(
-                    "/api/auth/**",
+                    "/api/auth/signin",
+                    "/api/auth/signup",
+                    "/api/auth/register",
+                    "/api/auth/forgot-password",
+                    "/api/auth/reset-password",
                     "/webhook/telegram",
                     "/telegram/webhook/**",
                     "/api/telegram/webhook/**",
+                    "/api/token-usage/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/v3/api-docs/**",
                     "/api-docs/**",
-                    "/api/token-usage/**",
                     "/h2-console/**",
                     "/error",
                     "/favicon.ico",
                     "/"
                 ).permitAll()
-                
-                // Эндпоинты для обычных пользователей
-                .requestMatchers("/api/support/messages/my").authenticated()
-                .requestMatchers("/api/support/messages").authenticated()
-                .requestMatchers("/api/support/messages/{id}").authenticated()
-                .requestMatchers("/api/support/messages/{id}/replies").authenticated()
-                .requestMatchers("/api/notifications/**").authenticated()
-                
-                // Админские эндпоинты
+
+                // Админские эндпоинты (только ADMIN)
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/support/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/admin/users/**").hasRole("ADMIN")
-                .requestMatchers(
-                    "/api/support/messages",
-                    "/api/support/messages/*/status",
-                    "/api/support/messages/*/assign",
-                    "/api/support/replies/**"
-                ).hasRole("ADMIN")
-                
+                .requestMatchers("/api/support/messages").hasRole("ADMIN")
+                .requestMatchers("/api/support/messages/*/status").hasRole("ADMIN")
+                .requestMatchers("/api/support/messages/*/assign").hasRole("ADMIN")
+                .requestMatchers("/api/support/messages/*/replies").hasRole("ADMIN")
+                .requestMatchers("/api/support/replies/**").hasRole("ADMIN")
+
+                // Эндпоинты для всех авторизованных пользователей
+                .requestMatchers("/api/auth/change-password").authenticated()
+                .requestMatchers("/api/auth/update-profile").authenticated()
+                .requestMatchers("/api/auth/delete-account").authenticated()
+                .requestMatchers("/api/auth/refresh-token").authenticated()
+                .requestMatchers("/api/bots/**").authenticated()
+                .requestMatchers("/api/products/**").authenticated()
+                .requestMatchers("/api/notifications/**").authenticated()
+                .requestMatchers("/api/support/messages/my").authenticated()
+                .requestMatchers("/api/support/messages/{id}").authenticated()
+                .requestMatchers("/api/user/subscription-details").authenticated()
+                .requestMatchers("/api/user/subscription").authenticated()
+
                 // Остальные эндпоинты требуют аутентификации
                 .anyRequest().authenticated()
             )
@@ -122,4 +131,3 @@ public class SecurityConfig {
         return source;
     }
 }
-

@@ -42,7 +42,7 @@ public class BotController {
      * @return ResponseEntity с сообщением об успехе или ошибке.
      */
     @PostMapping
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')") // Только авторизованные пользователи могут создавать ботов
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')") // Только авторизованные пользователи могут создавать ботов
     @Operation(summary = "Создать нового AI-бота", description = "Создает и настраивает нового бота для текущего пользователя.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Бот успешно создан",
@@ -69,7 +69,7 @@ public class BotController {
      * @return ResponseEntity со списком ботов.
      */
     @GetMapping
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')")
     @Operation(summary = "Получить список ботов пользователя", description = "Возвращает все AI-боты, принадлежащие текущему пользователю.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Список ботов успешно получен",
@@ -91,7 +91,7 @@ public class BotController {
      * @return ResponseEntity с сообщением об успехе.
      */
     @PutMapping("/shop-name/{botId}")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')")
     @Operation(summary = "Обновить имя магазина бота", description = "Обновляет имя магазина по ID бота. Только владелец может обновить имя.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Имя магазина успешно обновлено",
@@ -120,7 +120,7 @@ public class BotController {
      * @return ResponseEntity с сообщением об успехе.
      */
     @DeleteMapping("/{botId}")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')")
     @Operation(summary = "Удалить AI-бота", description = "Удаляет бота по его ID. Только владелец может удалить бота.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Бот успешно удален",
@@ -149,7 +149,7 @@ public class BotController {
      * @return ResponseEntity с обновленным объектом бота или сообщением об ошибке.
      */
     @PutMapping("/{botId}")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')")
     @Operation(summary = "Обновить существующего AI-бота", description = "Обновляет данные существующего бота. Доступно только владельцу бота.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Бот успешно обновлен",
@@ -176,7 +176,7 @@ public class BotController {
     }
 
     @GetMapping("/stats/{botId}")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')")
     @Operation(summary = "Получить статистику по боту", description = "Возвращает общее количество сообщений и диалогов для указанного бота. Доступно только владельцу бота.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Статистика успешно получена",
@@ -204,7 +204,7 @@ public class BotController {
      * @return ResponseEntity с сообщением об успехе или ошибке.
      */
     @PostMapping("/{botId}/webhook/activate")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')")
     @Operation(summary = "Активировать webhook бота", description = "Активирует webhook для указанного бота. Доступно только владельцу бота.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Webhook успешно активирован",
@@ -232,7 +232,7 @@ public class BotController {
      * @return ResponseEntity с сообщением об успехе или ошибке.
      */
     @PostMapping("/{botId}/webhook/deactivate")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')")
     @Operation(summary = "Деактивировать webhook бота", description = "Деактивирует webhook для указанного бота. Доступно только владельцу бота.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Webhook успешно деактивирован",
@@ -260,7 +260,7 @@ public class BotController {
      * @return ResponseEntity с информацией о статусе webhook.
      */
     @GetMapping("/{botId}/webhook/status")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')")
     @Operation(summary = "Получить статус webhook бота", description = "Возвращает текущий статус webhook для указанного бота. Доступно только владельцу бота.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Статус webhook успешно получен",

@@ -25,7 +25,7 @@ public class NotificationController {
      * Get all notifications for the authenticated user
      */
     @GetMapping
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')")
     public ResponseEntity<List<Notification>> getNotifications(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @RequestParam(defaultValue = "50") int limit) {
@@ -38,7 +38,7 @@ public class NotificationController {
      * Get unread notifications for the authenticated user
      */
     @GetMapping("/unread")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')")
     public ResponseEntity<List<Notification>> getUnreadNotifications(
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         
@@ -50,7 +50,7 @@ public class NotificationController {
      * Get unread notification count for the authenticated user
      */
     @GetMapping("/unread/count")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')")
     public ResponseEntity<Map<String, Long>> getUnreadNotificationCount(
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         
@@ -62,7 +62,7 @@ public class NotificationController {
      * Get recent notifications (last 7 days) for the authenticated user
      */
     @GetMapping("/recent")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')")
     public ResponseEntity<List<Notification>> getRecentNotifications(
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         
@@ -74,7 +74,7 @@ public class NotificationController {
      * Get notifications by type for the authenticated user
      */
     @GetMapping("/type/{type}")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')")
     public ResponseEntity<List<Notification>> getNotificationsByType(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @PathVariable String type) {
@@ -87,7 +87,7 @@ public class NotificationController {
      * Mark a notification as read
      */
     @PostMapping("/{notificationId}/read")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')")
     public ResponseEntity<Void> markNotificationAsRead(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @PathVariable Long notificationId) {
@@ -100,7 +100,7 @@ public class NotificationController {
      * Mark all notifications as read for the authenticated user
      */
     @PostMapping("/mark-all-read")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')")
     public ResponseEntity<Void> markAllNotificationsAsRead(
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         
@@ -112,7 +112,7 @@ public class NotificationController {
      * Delete a notification
      */
     @DeleteMapping("/{notificationId}")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')")
     public ResponseEntity<Void> deleteNotification(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @PathVariable Long notificationId) {
@@ -125,7 +125,7 @@ public class NotificationController {
      * Delete all notifications for the authenticated user
      */
     @DeleteMapping("/all")
-    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'STANDARD', 'PREMIUM', 'ADMIN')")
     public ResponseEntity<Void> deleteAllNotifications(
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         

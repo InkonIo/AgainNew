@@ -273,20 +273,24 @@ public class TelegramService {
         
         // Отправляем основной текстовый ответ
         sendMessage(chatId, aiResponse, bot.getAccessToken());
-        
+
         // Ищем товары, которые упоминаются в ответе AI
         for (Product product : allProducts) {
-            if (aiResponse.toLowerCase().contains(product.getName().toLowerCase()) && 
-                product.getImageUrl() != null && !product.getImageUrl().isEmpty()) {
-                
-                String productCaption = String.format("📦 %s\n💰 %s тг.\n📝 %s", 
-                        product.getName(), 
-                        product.getPrice(), 
+            // Проверяем, упоминается ли точное название продукта в ответе AI
+            // Используем регулярное выражение для более точного поиска слова, чтобы избежать частичных совпадений
+            String productNamePattern = "\\b" + product.getName().toLowerCase() + "\\b";
+            if (aiResponse.toLowerCase().matches(".*" + productNamePattern + ".*") &&
+                    product.getImageUrl() != null && !product.getImageUrl().isEmpty()) {
+
+                String productCaption = String.format("📦 %s\n💰 %s тг.\n📝 %s",
+                        product.getName(),
+                        product.getPrice(),
                         product.getDescription() != null ? product.getDescription() : "");
-                
+
+                // Отправляем изображение с полным описанием продукта
                 sendPhoto(chatId, product.getImageUrl(), productCaption, bot.getAccessToken());
-                
-                // Небольшая задержка между отправкой изображений
+
+                // Небольшая задержка между отправкой изображений, чтобы избежать флуда
                 try {
                     Thread.sleep(500);
                 } catch (InterruptedException e) {

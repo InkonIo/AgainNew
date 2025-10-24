@@ -41,7 +41,7 @@ public class ProductController {
     private final ExcelProductImportService excelProductImportService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Создать новый товар с изображением", 
                description = "Создает новый товар, привязанный к боту, с возможностью загрузки изображения.")
     @ApiResponses(value = {
@@ -98,7 +98,7 @@ public class ProductController {
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Обновить товар с изображением", 
                description = "Обновляет существующий товар по его ID с возможностью обновления изображения.")
     @ApiResponses(value = {
@@ -174,7 +174,7 @@ public class ProductController {
 
     // Оригинальные методы без изменений для обратной совместимости
     @PostMapping("/json")
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Создать новый товар (JSON)", description = "Создает новый товар, привязанный к боту (только JSON).")
     public ResponseEntity<?> createProductJson(@Valid @RequestBody CreateProductRequest request,
                                               @AuthenticationPrincipal UserPrincipal userPrincipal) {
@@ -188,7 +188,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}/json")
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Обновить товар (JSON)", description = "Обновляет существующий товар по его ID (только JSON).")
     public ResponseEntity<?> updateProductJson(@PathVariable Long id, @Valid @RequestBody UpdateProductRequest request,
                                               @AuthenticationPrincipal UserPrincipal userPrincipal) {
@@ -202,7 +202,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Удалить товар", description = "Удаляет товар по его ID.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Товар успешно удален"),
@@ -238,7 +238,7 @@ public class ProductController {
     // ========================================================================
 
     @DeleteMapping("/bot/{botId}/catalogs/{catalog}")
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Удалить каталог и все его товары", 
                description = "Удаляет все товары для указанного бота и каталога. Возвращает количество удаленных товаров.")
     @ApiResponses(value = {
@@ -263,7 +263,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/bot/{botId}/catalogs/{catalog}/subcategories/{subcategory}")
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Удалить подкатегорию и все ее товары", 
                description = "Удаляет все товары для указанного бота, каталога и подкатегории. Возвращает количество удаленных товаров.")
     @ApiResponses(value = {
@@ -290,7 +290,7 @@ public class ProductController {
 
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Получить товар по ID", description = "Возвращает информацию о товаре по его ID.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Товар успешно получен",
@@ -310,7 +310,7 @@ public class ProductController {
     }
 
     @GetMapping("/bot/{botId}")
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Получить товары бота", description = "Возвращает все товары, привязанные к указанному боту.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Товары успешно получены",
@@ -333,7 +333,7 @@ public class ProductController {
 
     // Новый эндпоинт для получения уникальных каталогов
     @GetMapping("/bot/{botId}/catalogs")
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Получить уникальные каталоги бота", description = "Возвращает список уникальных названий каталогов для указанного бота.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Каталоги успешно получены",
@@ -347,7 +347,7 @@ public class ProductController {
 
     // Новый эндпоинт для получения уникальных подкаталогов по каталогу
     @GetMapping("/bot/{botId}/catalogs/{catalog}/subcategories")
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Получить уникальные подкаталоги по каталогу", description = "Возвращает список уникальных названий подкаталогов для указанного бота и каталога.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Подкаталоги успешно получены",
@@ -363,7 +363,7 @@ public class ProductController {
 
     // Новый эндпоинт для получения товаров по подкаталогу (в наличии)
     @GetMapping("/bot/{botId}/catalogs/{catalog}/subcategories/{subcategory}/in-stock")
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Получить товары по подкаталогу (в наличии)", description = "Возвращает список товаров из указанного подкаталога, которые есть в наличии.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Товары успешно получены",
@@ -380,7 +380,7 @@ public class ProductController {
 
     // Эндпоинт для загрузки изображения отдельно
     @PostMapping(value = "/images/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Загрузить изображение отдельно", 
                description = "Загружает изображение в хранилище и возвращает его URL.")
     @ApiResponses(value = {
@@ -404,7 +404,7 @@ public class ProductController {
 
     // Эндпоинт для удаления изображения отдельно
     @DeleteMapping(value = "/images/delete")
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Удалить изображение отдельно", 
                description = "Удаляет изображение из хранилища по его URL.")
     @ApiResponses(value = {
@@ -431,7 +431,7 @@ public class ProductController {
 
     // Новый эндпоинт для импорта товаров из Excel файла
     @PostMapping(value = "/import/excel", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole(\'USER\') or hasRole(\'ADMIN\')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'STANDARD', 'PREMIUM')")
     @Operation(summary = "Импорт товаров из Excel файла", 
                description = "Загружает Excel файл с товарами и автоматически создает товары с помощью OpenAI для обработки данных.")
     @ApiResponses(value = {
