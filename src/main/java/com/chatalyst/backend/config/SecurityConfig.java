@@ -23,6 +23,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import org.springframework.http.HttpMethod;
+
 import java.util.Arrays;
 
 @Configuration
@@ -88,11 +90,9 @@ public class SecurityConfig {
                 // Админские эндпоинты (только ADMIN)
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/support/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/support/messages").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/support/messages").hasRole("ADMIN") // Список всех сообщений
                 .requestMatchers("/api/support/messages/*/status").hasRole("ADMIN")
                 .requestMatchers("/api/support/messages/*/assign").hasRole("ADMIN")
-                .requestMatchers("/api/support/messages/*/replies").hasRole("ADMIN")
-                .requestMatchers("/api/support/replies/**").hasRole("ADMIN")
 
                 // Эндпоинты для всех авторизованных пользователей
                 .requestMatchers("/api/auth/change-password").authenticated()
@@ -102,10 +102,14 @@ public class SecurityConfig {
                 .requestMatchers("/api/bots/**").authenticated()
                 .requestMatchers("/api/products/**").authenticated()
                 .requestMatchers("/api/notifications/**").authenticated()
-                .requestMatchers("/api/support/messages/my").authenticated()
-                .requestMatchers("/api/support/messages/{id}").authenticated()
                 .requestMatchers("/api/user/subscription-details").authenticated()
                 .requestMatchers("/api/user/subscription").authenticated()
+
+                // Support messages - пользовательские эндпоинты
+                .requestMatchers("/api/support/messages/my").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/support/messages/{id}").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/support/messages").authenticated() // ✅ Создать тикет
+                .requestMatchers(HttpMethod.POST, "/api/support/messages/{id}/replies").authenticated() // Ответить
 
                 // Остальные эндпоинты требуют аутентификации
                 .anyRequest().authenticated()
