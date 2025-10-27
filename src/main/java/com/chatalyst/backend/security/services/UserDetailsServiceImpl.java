@@ -24,3 +24,5 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         return UserPrincipal.create(user);
     }
 }
+
+// jwt suka
