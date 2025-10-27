@@ -12,12 +12,12 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @OpenAPIDefinition(
     info = @Info(
-        title = "Authentication API",
-        description = "REST API for user authentication and authorization with JWT",
+        title = "Chatalyst API",
+        description = "REST API for Chatalyst - AI-powered chatbot platform",
         version = "1.0.0",
         contact = @Contact(
-            name = "API Support",
-            email = "support@example.com"
+            name = "Chatalyst Support",
+            email = "VerifPharmacy@gmail.com"
         ),
         license = @License(
             name = "MIT License",
@@ -26,7 +26,7 @@ import org.springframework.context.annotation.Configuration;
     ),
     servers = {
         @Server(url = "http://localhost:8080", description = "Local Development Server"),
-        @Server(url = "https://api.example.com", description = "Production Server")
+        @Server(url = "https://againnew-production.up.railway.app", description = "Production Server") // ← Измените здесь
     }
 )
 @SecurityScheme(
