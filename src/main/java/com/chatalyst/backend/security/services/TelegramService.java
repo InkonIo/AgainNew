@@ -22,7 +22,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Сервис для взаимодействия с Telegram Bot API.
+ * Сервис для взаимодействия с Telegram Bot API dad ad
  */
 @Service
 @Slf4j
