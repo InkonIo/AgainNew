@@ -11,6 +11,7 @@ import com.chatalyst.backend.security.services.UserPrincipal;
 
 import java.nio.charset.StandardCharsets;
 
+
 import javax.crypto.SecretKey;
 import java.util.Date;
 
@@ -18,10 +19,10 @@ import java.util.Date;
 @Slf4j
 public class JwtUtils {
     
-    @Value("${app.jwt.secret}")
+    @Value("${JWT_SECRET}")
     private String jwtSecret;
     
-    @Value("${app.jwt.expiration-ms}")
+    @Value("${JWT_EXPIRATION}")
     private int jwtExpirationMs;
     
     public String generateJwtToken(Authentication authentication) {
@@ -36,10 +37,9 @@ public class JwtUtils {
                 .compact();
     }
     
-        private SecretKey key() {
-        // Используем обычный текст, закодированный в UTF-8
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
-    }
+       private SecretKey key() {
+    return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+}
     
     public String getEmailFromJwtToken(String token) {
         // Новый синтаксис для JJWT 0.12.x
