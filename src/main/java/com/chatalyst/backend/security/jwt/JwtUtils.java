@@ -9,6 +9,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 import com.chatalyst.backend.security.services.UserPrincipal;
 
+import java.nio.charset.StandardCharsets;
+
 import javax.crypto.SecretKey;
 import java.util.Date;
 
@@ -34,8 +36,9 @@ public class JwtUtils {
                 .compact();
     }
     
-    private SecretKey key() {
-        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+        private SecretKey key() {
+        // Используем обычный текст, закодированный в UTF-8
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
     
     public String getEmailFromJwtToken(String token) {
