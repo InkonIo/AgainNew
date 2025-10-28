@@ -1,6 +1,10 @@
 package com.chatalyst.backend.Support.Repository;
 
+import com.chatalyst.backend.Entity.User;
 import com.chatalyst.backend.Support.Entity.SupportMessageReply;
+
+import org.springframework.transaction.annotation.Transactional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -46,5 +50,10 @@ public interface SupportMessageReplyRepository extends JpaRepository<SupportMess
         WHERE r.isAdminReply = true
     """)
     Double findAverageResponseTimeInHours();
-}
 
+    // НОВЫЙ МЕТОД: Удаление всех ответов на сообщения поддержки, связанных с пользователем
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM SupportMessageReply r WHERE r.message.user = :user")
+    void deleteByUser(@Param("user") User user);
+}

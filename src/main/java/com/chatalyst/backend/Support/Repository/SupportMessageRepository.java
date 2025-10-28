@@ -7,6 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import org.springframework.data.jpa.repository.Modifying; // <-- НОВЫЙ ИМПОРТ
+import org.springframework.transaction.annotation.Transactional; // <-- НОВЫЙ ИМПОРТ
+import com.chatalyst.backend.Entity.User; // <-- НОВЫЙ ИМПОРТ
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -71,5 +75,11 @@ public interface SupportMessageRepository extends JpaRepository<SupportMessage, 
         LocalDate getDate();
         Long getCount();
     }
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM SupportMessage m WHERE m.user = :user")
+    void deleteByUser(@Param("user") User user);
+
 }
 

@@ -124,6 +124,12 @@
     <version>0.12.3</version>
     <scope>runtime</scope>
 </dependency>
+
+<dependency>
+        <groupId>io.github.cdimascio</groupId>
+        <artifactId>dotenv-java</artifactId>
+        <version>3.0.0</version> <!-- Проверьте актуальную версию, но эта должна работать -->
+    </dependency>
 <dependency>
             <groupId>com.stripe</groupId>
             <artifactId>stripe-java</artifactId>
@@ -173,5 +179,4 @@
     </build>
 
 </project>
-
 

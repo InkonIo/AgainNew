@@ -4,8 +4,10 @@ package com.chatalyst.backend.Repository;
 
 import com.chatalyst.backend.model.ChatMessage;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying; // Добавлено
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional; // Добавлено
 
 import java.util.List;
 
@@ -33,4 +35,14 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
      */
     @Query("SELECT COUNT(DISTINCT m.chatId) FROM ChatMessage m WHERE m.botIdentifier = :botIdentifier")
     long countDistinctChatIdsByBotIdentifier(@Param("botIdentifier") String botIdentifier);
+
+    /**
+     * Метод для эффективного удаления всех сообщений, связанных с ботом.
+     * @param botIdentifier The identifier of the bot.
+     * @return The number of deleted messages.
+     */
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM ChatMessage m WHERE m.botIdentifier = :botIdentifier")
+    int deleteByBotIdentifier(@Param("botIdentifier") String botIdentifier);
 }

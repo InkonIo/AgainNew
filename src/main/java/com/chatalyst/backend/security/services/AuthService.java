@@ -9,12 +9,14 @@ import com.chatalyst.backend.Repository.BotRepository;
 import com.chatalyst.backend.Repository.ChatMessageRepository;
 import com.chatalyst.backend.Repository.OpenAITokenUsageRepository;
 import com.chatalyst.backend.Repository.ProductRepository;
+import com.chatalyst.backend.Repository.NotificationRepository;
+import com.chatalyst.backend.Repository.PasswordResetTokenRepository;
+import com.chatalyst.backend.Support.Repository.SupportMessageReplyRepository;
 import com.chatalyst.backend.dto.JwtResponse;
 import com.chatalyst.backend.dto.LoginRequest;
 import com.chatalyst.backend.dto.RegisterRequest;
 import com.chatalyst.backend.security.jwt.JwtUtils;
 import com.chatalyst.backend.model.PasswordResetToken;
-import com.chatalyst.backend.Repository.PasswordResetTokenRepository;
 import com.chatalyst.backend.model.Bot;
 import com.chatalyst.backend.model.ChatMessage;
 import com.chatalyst.backend.model.OpenAITokenUsage;
@@ -33,6 +35,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.chatalyst.backend.Support.Repository.SupportMessageRepository;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -50,12 +54,15 @@ public class AuthService {
     private final JwtUtils jwtUtils;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final EmailService emailService;
+    private final SupportMessageRepository supportMessageRepository;
     
     // Репозитории для удаления связанных данных
     private final BotRepository botRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final OpenAITokenUsageRepository openAITokenUsageRepository;
     private final ProductRepository productRepository;
+    private final NotificationRepository notificationRepository;
+    private final SupportMessageReplyRepository supportMessageReplyRepository;
 
     @Transactional
     public JwtResponse authenticateUser(LoginRequest loginRequest) {
@@ -241,14 +248,9 @@ public class AuthService {
                 String botIdentifier = bot.getBotIdentifier();
                 
                 // 1. Удаляем сообщения чата для этого бота
-                List<ChatMessage> chatMessages = chatMessageRepository.findTop30ByChatIdAndBotIdentifierOrderByIdDesc(null, botIdentifier);
-                // Поскольку нет метода для удаления по botIdentifier, удаляем через findAll и фильтрацию
-                List<ChatMessage> allMessages = chatMessageRepository.findAll();
-                List<ChatMessage> botMessages = allMessages.stream()
-                    .filter(msg -> botIdentifier.equals(msg.getBotIdentifier()))
-                    .collect(Collectors.toList());
-                chatMessageRepository.deleteAll(botMessages);
-                log.debug("Deleted {} chat messages for bot: {}", botMessages.size(), botIdentifier);
+                // Используем новый метод для эффективного удаления по botIdentifier
+                int deletedMessages = chatMessageRepository.deleteByBotIdentifier(botIdentifier);
+                log.debug("Deleted {} chat messages for bot: {}", deletedMessages, botIdentifier);
 
                 // 2. Удаляем статистику использования токенов для этого бота
                 List<OpenAITokenUsage> tokenUsages = openAITokenUsageRepository.findByBotIdentifier(botIdentifier);
@@ -265,11 +267,27 @@ public class AuthService {
             botRepository.deleteAll(userBots);
             log.debug("Deleted {} bots for user: {}", userBots.size(), userEmail);
 
-            // 5. Удаляем токены сброса пароля
+            // 5. Удаляем связанные уведомления
+            notificationRepository.deleteByUser(user);
+            userRepository.flush(); // <-- Добавлен flush
+            log.debug("Deleted notifications for user: {}", userEmail);
+            
+            // 6. Удаляем ответы на сообщения поддержки (НОВОЕ РЕШЕНИЕ)
+            supportMessageReplyRepository.deleteByUser(user);
+            userRepository.flush(); // <-- Добавлен flush
+            log.debug("Deleted support message replies for user: {}", userEmail);
+
+            // 7. Удаляем сами сообщения поддержки
+            supportMessageRepository.deleteByUser(user);
+            userRepository.flush();
+            log.debug("Deleted support messages for user: {}", userEmail);
+            
+            // 8. Удаляем токены сброса пароля
             passwordResetTokenRepository.deleteByUser(user);
+            userRepository.flush(); // <-- Добавлен flush
             log.debug("Deleted password reset tokens for user: {}", userEmail);
 
-            // 6. Наконец, удаляем самого пользователя
+            // 8. Наконец, удаляем самого пользователя
             userRepository.delete(user);
             
             log.info("Account and all associated data deleted successfully for user: {}", userEmail);
@@ -280,4 +298,3 @@ public class AuthService {
         }
     }
 }
-

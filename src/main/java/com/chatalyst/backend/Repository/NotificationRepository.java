@@ -2,6 +2,9 @@ package com.chatalyst.backend.Repository;
 
 import com.chatalyst.backend.Entity.Notification;
 import com.chatalyst.backend.Entity.User;
+
+import jakarta.transaction.Transactional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -50,5 +53,10 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     // Get notification statistics for a user
     @Query("SELECT n.type, COUNT(n) FROM Notification n WHERE n.user = :user GROUP BY n.type")
     List<Object[]> getNotificationStatsByUser(@Param("user") User user);
+    
+    // НОВЫЙ МЕТОД: Удаление всех уведомлений, связанных с пользователем
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Notification n WHERE n.user = :user")
+    void deleteByUser(@Param("user") User user);
 }
-

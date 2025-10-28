@@ -19,10 +19,20 @@ import java.util.Date;
 @Slf4j
 public class JwtUtils {
     
-    @Value("${JWT_SECRET}")
+    // Было:
+    // @Value("${JWT_SECRET}")
+    // private String jwtSecret;
+
+    // Стало:
+    @Value("${app.jwtSecret}")
     private String jwtSecret;
-    
-    @Value("${JWT_EXPIRATION}")
+
+    // Было:
+    // @Value("${JWT_EXPIRATION}")
+    // private int jwtExpirationMs;
+
+    // Стало:
+    @Value("${app.jwtExpirationMs}")
     private int jwtExpirationMs;
     
     public String generateJwtToken(Authentication authentication) {
