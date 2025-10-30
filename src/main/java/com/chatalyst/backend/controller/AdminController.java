@@ -77,8 +77,7 @@ public class AdminController {
     }
 
     /**
-     * Update user role (admin only)
-     */
+     // Update user role (admin only)     */
     @PutMapping("/users/{userId}/role")
     public ResponseEntity<UserDTO> updateUserRole(
             @AuthenticationPrincipal UserPrincipal userPrincipal,

@@ -175,24 +175,47 @@ public Map<String, Object> getUsersStatistics() {
     /**
      * Convert User entity to UserDTO
      */
-    private UserDTO convertToDTO(User user) {
-        UserDTO dto = new UserDTO();
-        dto.setId(user.getId());
-        dto.setEmail(user.getEmail());
-        dto.setFirstName(user.getFirstName());
-        dto.setLastName(user.getLastName());
-        dto.setActive(user.getActive());
-        dto.setCreatedAt(user.getCreatedAt());
-        dto.setUpdatedAt(user.getUpdatedAt());
-        
-        // Get primary role (first role)
-        if (!user.getRoles().isEmpty()) {
-            Role primaryRole = user.getRoles().iterator().next();
-            dto.setRole(primaryRole.getName().name().replace("ROLE_", ""));
-        } else {
-            dto.setRole("USER");
-        }
-        
-        return dto;
+    /**
+ * Convert User entity to UserDTO
+ */
+private UserDTO convertToDTO(User user) {
+    UserDTO dto = new UserDTO();
+    dto.setId(user.getId());
+    dto.setEmail(user.getEmail());
+    dto.setFirstName(user.getFirstName());
+    dto.setLastName(user.getLastName());
+    dto.setActive(user.getActive());
+    dto.setCreatedAt(user.getCreatedAt());
+    dto.setUpdatedAt(user.getUpdatedAt());
+    
+    // Добавляем supportLevel (подписку) - ВАЖНО! USER вместо NONE
+    String supportLevel = user.getSupportLevel();
+    if (supportLevel == null || supportLevel.isEmpty() || "NONE".equalsIgnoreCase(supportLevel)) {
+        supportLevel = "USER";
     }
+    dto.setSupportLevel(supportLevel);
+    
+    // Добавляем информацию о подписке
+    dto.setBotsAllowed(user.getBotsAllowed() != null ? user.getBotsAllowed() : 0);
+    dto.setMonthlyMessagesLimit(user.getMonthlyMessagesLimit() != null ? user.getMonthlyMessagesLimit() : 0);
+    dto.setMonthlyMessagesUsed(user.getMonthlyMessagesUsed() != null ? user.getMonthlyMessagesUsed() : 0);
+    dto.setSubscriptionStart(user.getSubscriptionStart());
+    dto.setSubscriptionEnd(user.getSubscriptionEnd());
+    
+    // Determine primary role: ADMIN is highest priority, then PREMIUM, then STANDARD, then USER
+    String primaryRoleName = user.getRoles().stream()
+            .map(Role::getName)
+            .map(Enum::name)
+            .max(Comparator.comparing((String roleName) -> {
+                if (roleName.contains("ADMIN")) return 4;
+                if (roleName.contains("PREMIUM")) return 3;
+                if (roleName.contains("STANDARD")) return 2;
+                return 1; // ROLE_USER
+            }))
+            .orElse("ROLE_USER");
+
+    dto.setRole(primaryRoleName.replace("ROLE_", ""));
+    
+    return dto;
+}
 }

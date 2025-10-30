@@ -70,8 +70,8 @@ private Integer monthlyMessagesUsed = 0; // Использовано сообщ�
 @Column(nullable = false, columnDefinition = "integer default 0")
 private Integer botsAllowed = 0; // Сколько ботов можно создать
 
-@Column(nullable = false, length = 50, columnDefinition = "varchar(50) default 'NONE'")
-private String supportLevel = "NONE"; // NONE, BASIC, PRIORITY
+@Column(nullable = false, length = 50, columnDefinition = "varchar(50) default 'USER'")
+private String supportLevel = "USER"; // USER, BASIC, PRIORITY
 
 private LocalDateTime subscriptionStart; // Дата начала тарифа
 

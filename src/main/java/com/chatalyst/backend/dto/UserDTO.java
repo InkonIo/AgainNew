@@ -26,4 +26,12 @@ public class UserDTO {
     private Long totalMessages;
     private LocalDateTime lastLoginAt;
     private String profilePicture;
+    
+    // Subscription fields - ДОБАВЛЕНО
+    private String supportLevel;
+    private Integer botsAllowed;
+    private Integer monthlyMessagesLimit;
+    private Integer monthlyMessagesUsed;
+    private LocalDateTime subscriptionStart;
+    private LocalDateTime subscriptionEnd;
 }

@@ -1,6 +1,5 @@
 package com.chatalyst.backend.KaspiPayment.Service;
 
-
 import com.chatalyst.backend.Entity.Role;
 import com.chatalyst.backend.Entity.RoleName;
 import com.chatalyst.backend.Entity.User;
@@ -27,16 +26,19 @@ public class SubscriptionService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Пользователь не найден с ID: " + userId));
 
+        // ВАЖНО: Запретить изменение подписки для админов
+        boolean isAdmin = user.getRoles().stream()
+                .anyMatch(r -> r.getName() == RoleName.ROLE_ADMIN);
+        
+        if (isAdmin) {
+            throw new RuntimeException("Нельзя изменять подписку для администраторов");
+        }
+
         // Preserve existing roles that are not subscription-related (e.g., ADMIN)
         Set<Role> updatedRoles = new HashSet<>();
         Role userRole = roleRepository.findByName(RoleName.ROLE_USER)
                 .orElseThrow(() -> new RuntimeException("Роль USER не найдена"));
-        updatedRoles.add(userRole); // Ensure ROLE_USER is always present by default
-
-        // Add ADMIN role if user already has it
-        user.getRoles().stream()
-                .filter(r -> r.getName() == RoleName.ROLE_ADMIN)
-                .forEach(updatedRoles::add);
+        updatedRoles.add(userRole);
 
         Role newSubscriptionRole = null;
 
@@ -54,8 +56,8 @@ public class SubscriptionService {
             user.setMonthlyMessagesLimit(15000);
             user.setSubscriptionStart(LocalDateTime.now());
             user.setSubscriptionEnd(LocalDateTime.now().plusMonths(2));
-        } else if ("NONE".equalsIgnoreCase(subscriptionType)) {
-            // No specific subscription role to add, just keep ROLE_USER and ADMIN if present
+        } else if ("NONE".equalsIgnoreCase(subscriptionType) || "USER".equalsIgnoreCase(subscriptionType)) {
+            // No subscription - just basic user
             user.setBotsAllowed(0);
             user.setMonthlyMessagesLimit(0);
             user.setSubscriptionStart(null);
@@ -70,8 +72,12 @@ public class SubscriptionService {
 
         user.setRoles(updatedRoles);
 
-        // Set supportLevel based on subscriptionType
-        user.setSupportLevel(subscriptionType);
+        // Set supportLevel - используем "USER" вместо "NONE"
+        if ("NONE".equalsIgnoreCase(subscriptionType)) {
+            user.setSupportLevel("USER");
+        } else {
+            user.setSupportLevel(subscriptionType);
+        }
 
         userRepository.save(user);
         return user;
@@ -79,31 +85,34 @@ public class SubscriptionService {
 
     public SubscriptionDetailsDTO getSubscriptionDetailsForUser(User user) {
         int botsAllowed = 0;
-        String supportLevel = "NONE";
+        String supportLevel = "USER";
 
-        // 1. Check for highest subscription role (PREMIUM)
-        if (user.getRoles().stream().anyMatch(r -> r.getName() == RoleName.ROLE_PREMIUM)) {
+        // 1. ADMIN - высший приоритет, 50 ботов
+        if (user.getRoles().stream().anyMatch(r -> r.getName() == RoleName.ROLE_ADMIN)) {
+            botsAllowed = 50;
+            supportLevel = "ADMIN";
+        }
+        // 2. PREMIUM
+        else if (user.getRoles().stream().anyMatch(r -> r.getName() == RoleName.ROLE_PREMIUM)) {
             botsAllowed = 3;
             supportLevel = "PREMIUM";
-        // 2. Check for STANDARD subscription role
-        } else if (user.getRoles().stream().anyMatch(r -> r.getName() == RoleName.ROLE_STANDARD)) {
+        }
+        // 3. STANDARD
+        else if (user.getRoles().stream().anyMatch(r -> r.getName() == RoleName.ROLE_STANDARD)) {
             botsAllowed = 1;
             supportLevel = "STANDARD";
-        // 3. Check for ADMIN role (should not be considered a subscription level, but kept for logic consistency)
-        } else if (user.getRoles().stream().anyMatch(r -> r.getName() == RoleName.ROLE_ADMIN)) {
-            botsAllowed = 999; // Example: unlimited bots for admin
-            supportLevel = "ADMIN";
-        } else if (user.getRoles().stream().anyMatch(r -> r.getName() == RoleName.ROLE_USER)) {
-            // 4. Default to standard user if no subscription/admin role is found
+        }
+        // 4. USER (базовый уровень)
+        else if (user.getRoles().stream().anyMatch(r -> r.getName() == RoleName.ROLE_USER)) {
             supportLevel = "USER";
-            botsAllowed = 0; // Default for ROLE_USER without subscription
+            botsAllowed = 0;
         }
         
-        // Overwrite with user-specific settings if available and greater than 0 (for botsAllowed)
+        // Переопределяем из базы, если явно установлено
         if (user.getBotsAllowed() != null && user.getBotsAllowed() > 0) {
             botsAllowed = user.getBotsAllowed();
         }
-        // Overwrite supportLevel if explicitly set on User entity (e.g., from assignSubscription)
+        
         if (user.getSupportLevel() != null && !user.getSupportLevel().isEmpty()) {
             supportLevel = user.getSupportLevel();
         }
@@ -111,4 +120,3 @@ public class SubscriptionService {
         return new SubscriptionDetailsDTO(botsAllowed, supportLevel);
     }
 }
-
