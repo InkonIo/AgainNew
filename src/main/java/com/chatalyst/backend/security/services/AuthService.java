@@ -18,7 +18,6 @@ import com.chatalyst.backend.dto.RegisterRequest;
 import com.chatalyst.backend.security.jwt.JwtUtils;
 import com.chatalyst.backend.model.PasswordResetToken;
 import com.chatalyst.backend.model.Bot;
-import com.chatalyst.backend.model.ChatMessage;
 import com.chatalyst.backend.model.OpenAITokenUsage;
 import com.chatalyst.backend.model.Product;
 

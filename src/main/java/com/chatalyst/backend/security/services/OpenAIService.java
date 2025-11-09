@@ -1,4 +1,3 @@
-// src/main/java/com/chatalyst/backend/security/services/OpenAIService.java
 package com.chatalyst.backend.security.services;
 
 import com.chatalyst.backend.Repository.OpenAITokenUsageRepository;
@@ -14,7 +13,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -22,10 +20,9 @@ import java.util.List;
 @Slf4j
 public class OpenAIService {
 
-    // Цены на токены для модели gpt-3.5-turbo (актуально на 2024 год)
     private static final double USD_PER_1K_PROMPT_TOKENS = 0.0015;
     private static final double USD_PER_1K_COMPLETION_TOKENS = 0.002;
-    private static final double KZT_EXCHANGE_RATE = 540.0; // Курс тенге
+    private static final double KZT_EXCHANGE_RATE = 540.0;
 
     @Value("${openai.api.key}")
     private String openaiApiKey;
@@ -38,75 +35,24 @@ public class OpenAIService {
     private final ObjectMapper objectMapper;
     private final OpenAITokenUsageRepository tokenUsageRepository;
 
-    public OpenAIService(WebClient openAiWebClient, ObjectMapper objectMapper, OpenAITokenUsageRepository tokenUsageRepository) {
+    public OpenAIService(WebClient openAiWebClient, ObjectMapper objectMapper, 
+                        OpenAITokenUsageRepository tokenUsageRepository) {
         this.openAiWebClient = openAiWebClient;
         this.objectMapper = objectMapper;
         this.tokenUsageRepository = tokenUsageRepository;
     }
 
     /**
-     * Умный ответ с учетом истории сообщений и информации о товарах.
-     * @param conversationHistory История диалога.
-     * @param productCatalogInfo Информация о товарах.
-     * @param shopName Название магазина.
-     * @param botIdentifier Идентификатор бота.
-     * @param chatId ID чата для сохранения статистики.
-     * @return Ответ от AI.
+     * Улучшенный ответ с поддержкой изображений и агрессивными продажами
      */
-    public String getBotResponse(List<String[]> chatHistory, String productCatalogInfo, String shopName, String botIdentifier, Long chatId) {
+    public String getBotResponseWithImageSupport(List<String[]> chatHistory, String productCatalogInfo, 
+                                                  String shopName, String botIdentifier, Long chatId) {
         ArrayNode messages = objectMapper.createArrayNode();
 
-        // Системное сообщение: инструкция для ассистента
+        // 🔥 СУПЕР-АГРЕССИВНЫЙ ПРОМПТ ПРОДАВЦА
         ObjectNode systemMessage = objectMapper.createObjectNode();
         systemMessage.put("role", "system");
-        systemMessage.put("content",
-                "Ты — умный Telegram-бот-консультант, который помогает пользователю найти товары в магазине \"" + shopName + "\". " +
-                        "Вот информация из каталога: " + productCatalogInfo + ". " +
-                        "Отвечай кратко и по делу, если пользователь что-то просит — предлагай товары по смыслу. " +
-                        "Ты можешь догадываться, что он имеет в виду, даже если формулировка не точная. " +
-                        "Не выдумывай товары — только из каталога. Если ничего не найдено — мягко скажи об этом."
-        );
-        messages.add(systemMessage);
-
-        // Добавляем историю сообщений (роль: user / assistant)
-        for (String[] msg : chatHistory) {
-            ObjectNode messageNode = objectMapper.createObjectNode();
-            messageNode.put("role", msg[0]);
-            messageNode.put("content", msg[1]);
-            messages.add(messageNode);
-        }
-
-        return callOpenAI(messages, botIdentifier, chatId);
-    }
-
-    /**
-     * Улучшенный метод для ответа с поддержкой изображений товаров.
-     * @param chatHistory История диалога.
-     * @param productCatalogInfo Информация о товарах с URL изображений.
-     * @param shopName Название магазина.
-     * @param botIdentifier Идентификатор бота.
-     * @param chatId ID чата.
-     * @return Ответ от AI с указаниями о товарах для показа.
-     */
-    public String getBotResponseWithImageSupport(List<String[]> chatHistory, String productCatalogInfo, String shopName, String botIdentifier, Long chatId) {
-        ArrayNode messages = objectMapper.createArrayNode();
-
-        // Расширенное системное сообщение с инструкциями по изображениям
-        ObjectNode systemMessage = objectMapper.createObjectNode();
-        systemMessage.put("role", "system");
-        systemMessage.put("content",
-                "Ты — умный и вежливый Telegram-бот-консультант для магазина \"" + shopName + "\". " +
-                        "Твоя основная задача — помогать пользователю находить товары, отвечать на вопросы о них и предлагать релевантные варианты. " +
-                        "Всегда сохраняй контекст диалога и используй предыдущие сообщения для формирования более точных и логичных ответов. " +
-                        "Если пользователь спрашивает о товаре, который он только что видел или о котором спрашивал, отвечай, опираясь на эту информацию. " +
-                        "Вот актуальная информация из каталога магазина: " + productCatalogInfo + ". " +
-                        "Отвечай кратко, по делу и дружелюбно. " +
-                        "Если пользователь что-то ищет или спрашивает, предлагай товары по смыслу, даже если формулировка не точная. " +
-                        "Не выдумывай товары — предлагай только те, что есть в каталоге. Если по запросу ничего не найдено, вежливо сообщи об этом. " +
-                        "Когда рекомендуешь товары, обязательно упоминай их точные названия в своем ответе. Это критически важно, так как система автоматически покажет изображения этих товаров пользователю, если они есть. " +
-                        "Если у товара есть изображение (отмечено как [ИЗОБРАЖЕНИЕ: URL]), то при упоминании этого товара пользователь увидит его фото. " +
-                        "Пример логического ответа: \"Да, в нашем магазине есть бананы. Это сладкий, питательный плод с плотной кожурой и мягкой мякотью. Стоимость 6000.00 тг. Могу помочь с выбором или поиском других товаров?\""
-        );
+        systemMessage.put("content", buildAggressiveSalesPrompt(shopName, productCatalogInfo));
         messages.add(systemMessage);
 
         // Добавляем историю сообщений
@@ -121,17 +67,140 @@ public class OpenAIService {
     }
 
     /**
-     * Общий метод для вызова OpenAI API.
-     * @param messages Массив сообщений для отправки.
-     * @param botIdentifier Идентификатор бота.
-     * @param chatId ID чата.
-     * @return Ответ от AI.
+     * Построение агрессивного промпта продавца
+     */
+    private String buildAggressiveSalesPrompt(String shopName, String productCatalogInfo) {
+        return String.format("""
+            🎯 ТЫ - ПРОФЕССИОНАЛЬНЫЙ ПРОДАВЕЦ МАГАЗИНА "%s"
+            
+            ═══════════════════════════════════════════════════════════════
+            🔥 ТВОЯ ГЛАВНАЯ МИССИЯ: ПРОДАТЬ! ПРОДАТЬ! ПРОДАТЬ!
+            ═══════════════════════════════════════════════════════════════
+            
+            📋 КАТАЛОГ ТОВАРОВ:
+            %s
+            
+            ═══════════════════════════════════════════════════════════════
+            💼 ПРАВИЛА УСПЕШНОГО ПРОДАВЦА:
+            ═══════════════════════════════════════════════════════════════
+            
+            1️⃣ ВСЕГДА БУДЬ АКТИВНЫМ
+               ❌ "У нас есть бананы"
+               ✅ "Супер! Наши бананы - это бомба! Свежайшие, сладкие, только сегодня привезли! Берём?"
+            
+            2️⃣ ЗАДАВАЙ УТОЧНЯЮЩИЕ ВОПРОСЫ
+               - "Для себя или в подарок?"
+               - "Сколько вам нужно?"
+               - "Может ещё что-то добавим?"
+            
+            3️⃣ СОЗДАВАЙ СРОЧНОСТЬ
+               - "Последние 3 штуки!"
+               - "Сегодня скидка!"
+               - "Пока не разобрали!"
+            
+            4️⃣ ПРЕДЛАГАЙ ДОПОЛНИТЕЛЬНЫЕ ТОВАРЫ (UPSELL & CROSS-SELL)
+               - Если купили фрукты → предложи йогурт
+               - Если купили мясо → предложи специи
+               - Если купили хлеб → предложи масло
+            
+            5️⃣ ИСПОЛЬЗУЙ ЭМОДЗИ 😊🔥💯✨
+               - Делай сообщения живыми и эмоциональными
+               - Создавай позитивное настроение
+            
+            6️⃣ ПОНИМАЙ НАМЁКИ И НЕТОЧНЫЕ ЗАПРОСЫ
+               - "Хочу что-то сладкое" → предложи десерты, фрукты, соки
+               - "На ужин" → предложи готовую еду, овощи, мясо
+               - "Полезное" → предложи здоровые продукты
+            
+            7️⃣ ВСЕГДА ЗАКАНЧИВАЙ ПРИЗЫВОМ К ДЕЙСТВИЮ
+               ❌ "Вот наши товары"
+               ✅ "Что из этого добавляем? Или посоветовать ещё что-то? 😊"
+            
+            ═══════════════════════════════════════════════════════════════
+            📝 ШАБЛОНЫ ОТВЕТОВ НА РАЗНЫЕ СИТУАЦИИ:
+            ═══════════════════════════════════════════════════════════════
+            
+            🎬 ПРИВЕТСТВИЕ:
+            "Привет! 👋 Рад тебя видеть! Ищешь что-то конкретное или подскажу что нового и вкусного? 😊"
+            
+            🎬 ОБЩИЙ ЗАПРОС ("что есть", "покажи товары"):
+            "Окей, смотри что у нас огонь! 🔥
+            
+            🍌 Бананы свежие - 500тг (сладкие, идеально для смузи или просто так)
+            🥕 Морковь молодая - 300тг (хрустящая, витаминная бомба!)
+            🥗 Салат цезарь - 1200тг (готовый, просто открой и наслаждайся)
+            
+            Что берём? Или расскажу подробнее про что-то конкретное? 😊"
+            
+            🎬 ИНТЕРЕС К ТОВАРУ:
+            "Отличный выбор! 👌 [Название товара] - это реально топ!
+            
+            Почему стоит взять:
+            ✨ [Преимущество 1]
+            ✨ [Преимущество 2]
+            ✨ [Преимущество 3]
+            
+            Цена: всего [цена]тг - выгодно! 💯
+            
+            Добавляю в корзину? Сколько штук нужно?"
+            
+            🎬 ПОСЛЕ ДОБАВЛЕНИЯ В КОРЗИНУ:
+            "Супер! ✅ [Товар] уже в корзине!
+            
+            Кстати, может ещё что-то добавим? 
+            У нас есть крутые [дополнительный товар 1] и [дополнительный товар 2] - отлично сочетаются! 😊"
+            
+            🎬 СОМНЕВАЕТСЯ:
+            "Понимаю! 😊 Давай так: я расскажу подробнее про [товар], и ты решишь.
+            
+            [Детальное описание с преимуществами]
+            
+            Многие берут и очень довольны! Хочешь попробовать?"
+            
+            🎬 НИЧЕГО НЕ НАШЛИ:
+            "Хмм, по твоему запросу прямо сейчас ничего нет 😔
+            
+            Но смотри, у нас есть похожее:
+            - [Альтернатива 1]
+            - [Альтернатива 2]
+            
+            Может что-то из этого подойдёт? Или подскажи подробнее что ищешь!"
+            
+            ═══════════════════════════════════════════════════════════════
+            ⚠️ КРИТИЧЕСКИ ВАЖНО:
+            ═══════════════════════════════════════════════════════════════
+            
+            ✅ УПОМИНАЙ ТОЧНЫЕ НАЗВАНИЯ товаров из каталога
+            ✅ Когда упоминаешь товар с [ФОТО] - система автоматически покажет его фото
+            ✅ Будь энергичным, позитивным, мотивированным
+            ✅ ВСЕГДА веди к продаже
+            ✅ Используй техники продаж: срочность, выгоду, социальное доказательство
+            
+            ❌ НЕ выдумывай товары - только из каталога
+            ❌ НЕ будь пассивным - будь активным!
+            ❌ НЕ говори "вот список товаров" - ПРЕДЛАГАЙ конкретное
+            ❌ НЕ пиши слишком длинно - будь лаконичен но ярок
+            
+            ═══════════════════════════════════════════════════════════════
+            💪 ТВОЙ СТИЛЬ: ЭНЕРГИЧНЫЙ, ДРУЖЕЛЮБНЫЙ, ПРОДАЮЩИЙ!
+            ═══════════════════════════════════════════════════════════════
+            
+            Помни: ты не просто консультант, ты - ПРОДАВЕЦ МЕЧТЫ! 🚀
+            Твоя задача - сделать так, чтобы клиент захотел купить ПРЯМО СЕЙЧАС!
+            
+            Поехали продавать! 💪🔥
+            """, shopName, productCatalogInfo);
+    }
+
+    /**
+     * Общий метод для вызова OpenAI API
      */
     private String callOpenAI(ArrayNode messages, String botIdentifier, Long chatId) {
         ObjectNode requestBody = objectMapper.createObjectNode();
         requestBody.put("model", openaiModel);
         requestBody.set("messages", messages);
-        requestBody.put("temperature", 0.7);
+        requestBody.put("temperature", 0.8); // Повышаем креативность для более живых ответов
+        requestBody.put("max_tokens", 500); // Ограничиваем длину ответов
 
         log.info("⏳ Sending OpenAI request with context for bot: {}", botIdentifier);
 
@@ -147,7 +216,7 @@ public class OpenAIService {
             JsonNode rootNode = objectMapper.readTree(responseString);
             String assistantResponse = rootNode.path("choices").get(0).path("message").path("content").asText();
 
-            // Извлекаем информацию об использовании токенов и сохраняем ее
+            // Извлекаем информацию об использовании токенов и сохраняем её
             JsonNode usageNode = rootNode.path("usage");
             if (usageNode.isObject() && botIdentifier != null && chatId != null) {
                 saveTokenUsage(usageNode, botIdentifier, chatId);
@@ -158,15 +227,12 @@ public class OpenAIService {
 
         } catch (Exception e) {
             log.error("❌ OpenAI error: {}", e.getMessage(), e);
-            return "Извините, произошла ошибка при обработке вашего запроса. Попробуйте позже.";
+            return "Извините, произошла ошибка при обработке вашего запроса. Попробуйте позже или используйте кнопки меню! 😊";
         }
     }
 
     /**
-     * Сохраняет статистику использования токенов.
-     * @param usageNode Узел с информацией об использовании токенов.
-     * @param botIdentifier Идентификатор бота.
-     * @param chatId ID чата.
+     * Сохранение статистики использования токенов
      */
     private void saveTokenUsage(JsonNode usageNode, String botIdentifier, Long chatId) {
         int promptTokens = usageNode.path("prompt_tokens").asInt();
@@ -194,7 +260,7 @@ public class OpenAIService {
     }
 
     /**
-     * Простой ответ без каталога и истории (например, для общего чата).
+     * Простой ответ без каталога и истории
      */
     public String getBotResponse(String userMessage) {
         try {
@@ -217,6 +283,13 @@ public class OpenAIService {
             return "Извините, произошла ошибка при обработке вашего запроса.";
         }
     }
+
+    /**
+     * Базовый метод с историей (устаревший, оставлен для совместимости)
+     */
+    public String getBotResponse(List<String[]> chatHistory, String productCatalogInfo, 
+                                 String shopName, String botIdentifier, Long chatId) {
+        // Перенаправляем на улучшенную версию
+        return getBotResponseWithImageSupport(chatHistory, productCatalogInfo, shopName, botIdentifier, chatId);
+    }
 }
-
-

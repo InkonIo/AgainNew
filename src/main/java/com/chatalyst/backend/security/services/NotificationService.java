@@ -5,6 +5,7 @@ import com.chatalyst.backend.Entity.RoleName;
 import com.chatalyst.backend.Entity.User;
 import com.chatalyst.backend.Repository.NotificationRepository;
 import com.chatalyst.backend.Repository.UserRepository;
+import com.chatalyst.backend.model.Order; // Импорт новой сущности Order
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -23,6 +24,28 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+
+    /**
+     * Отправляет уведомление владельцу бота о новом заказе.
+     * @param order Объект нового заказа.
+     */
+    @Transactional
+    public Notification sendNewOrderNotification(Order order) {
+        User owner = order.getBot().getOwner();
+        String title = "Новый заказ #" + order.getId() + " от клиента!";
+        String message = String.format(
+            "Поступил новый заказ на сумму %s %s через бота '%s'. Клиент: %s. Адрес: %s. Телефон: %s.",
+            order.getTotalAmount(), 
+            "TNG", // Предполагаем валюту
+            order.getBot().getName(),
+            owner.getEmail(), // Используем email владельца
+            order.getClientDeliveryAddress(),
+            order.getClientContactPhone()
+        );
+        
+        // Используем тип "ORDER" для фильтрации
+        return createNotificationForUser(owner, "ORDER", title, message, order.getId(), "high");
+    }
 
     /**
      * Create a notification for a specific user
@@ -232,4 +255,3 @@ public class NotificationService {
         return notificationRepository.findByMessageIdOrderByCreatedAtDesc(messageId);
     }
 }
-

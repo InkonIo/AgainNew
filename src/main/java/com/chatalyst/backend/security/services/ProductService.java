@@ -1,10 +1,8 @@
 // src/main/java/com/chatalyst/backend/security/services/ProductService.java
 package com.chatalyst.backend.security.services;
 
-import com.chatalyst.backend.Entity.User;
 import com.chatalyst.backend.Repository.BotRepository;
 import com.chatalyst.backend.Repository.ProductRepository;
-import com.chatalyst.backend.Repository.UserRepository;
 import com.chatalyst.backend.dto.CreateProductRequest;
 import com.chatalyst.backend.dto.ProductResponse;
 import com.chatalyst.backend.dto.UpdateProductRequest;
@@ -26,7 +24,6 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final BotRepository botRepository;
-    private final UserRepository userRepository;
     private final PsObjectStorageService psObjectStorageService; // Изменено: используем PsObjectStorageService
 
     /**
