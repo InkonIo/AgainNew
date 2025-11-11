@@ -55,5 +55,17 @@ public class SupportMessage {
     
     @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<SupportMessageReply> replies = new ArrayList<>();
+
+    // Поле для связи с заказом, если сообщение создано на основе заказа
+    @Column(name = "order_id")
+    private Long orderId;
+
+    // === НОВЫЕ ПОЛЯ ДЛЯ АРХИВАЦИИ ===
+    
+    @Column(nullable = false)
+    private Boolean archived = false;
+    
+    @Column(name = "archived_at")
+    private LocalDateTime archivedAt;
 }
 

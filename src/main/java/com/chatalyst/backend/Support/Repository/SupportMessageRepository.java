@@ -81,5 +81,19 @@ public interface SupportMessageRepository extends JpaRepository<SupportMessage, 
     @Query("DELETE FROM SupportMessage m WHERE m.user = :user")
     void deleteByUser(@Param("user") User user);
 
+
+    // === НОВЫЕ МЕТОДЫ ДЛЯ АРХИВАЦИИ ===
+
+// Получить активные (неархивные) сообщения пользователя
+@Query("SELECT m FROM SupportMessage m WHERE m.user.id = :userId AND m.archived = false ORDER BY m.createdAt DESC")
+List<SupportMessage> findActiveByUserIdOrderByCreatedAtDesc(@Param("userId") Long userId);
+
+// Получить архивные сообщения пользователя
+@Query("SELECT m FROM SupportMessage m WHERE m.user.id = :userId AND m.archived = true ORDER BY m.archivedAt DESC")
+List<SupportMessage> findArchivedByUserIdOrderByArchivedAtDesc(@Param("userId") Long userId);
+
+// Получить все активные сообщения для админов
+@Query("SELECT m FROM SupportMessage m WHERE m.archived = false ORDER BY m.createdAt DESC")
+List<SupportMessage> findAllActiveOrderByCreatedAtDesc();
 }
 

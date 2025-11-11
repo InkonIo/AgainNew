@@ -2,6 +2,7 @@ package com.chatalyst.backend.forbusinessman.controller;
 
 import com.chatalyst.backend.forbusinessman.dto.*;
 import com.chatalyst.backend.forbusinessman.service.BusinessmanService;
+
 import com.chatalyst.backend.security.jwt.JwtUtils; // ← ИЗМЕНЕНО!
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,8 @@ public class BusinessmanController {
 
     private final BusinessmanService businessmanService;
     private final JwtUtils jwtUtils; // ← ИЗМЕНЕНО с JwtService на JwtUtils!
+
+    // ==================== PaymentInfo Endpoints ====================
 
     // ==================== PaymentInfo Endpoints ====================
 

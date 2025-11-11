@@ -36,6 +36,8 @@ public class SupportMessageRepositoryCustomImpl implements SupportMessageReposit
         Root<SupportMessage> root = cq.from(SupportMessage.class);
 
         List<Predicate> predicates = new ArrayList<>();
+        // === ВАЖНО: Фильтруем только неархивные сообщения для админов ===
+        predicates.add(cb.equal(root.get("archived"), false));
 
         if (status != null) {
             predicates.add(cb.equal(root.get("status"), status));

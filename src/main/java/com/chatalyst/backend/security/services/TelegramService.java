@@ -522,15 +522,23 @@ public class TelegramService {
                     "Адрес: %s\n" +
                     "Телефон: %s\n" +
                     "Комментарий: %s\n\n" +
-                    "Общая сумма: *%s тг*\n\n" +
-                    "Владелец бота уже получил уведомление и скоро свяжется с вами для подтверждения и оплаты.",
-                    orderResponse.getId(),
-                    address,
-                    phone,
-                    comment != null ? comment : "Нет",
-                    orderResponse.getTotalAmount()
-            );
-            sendMessage(chatId, confirmationMessage, bot.getAccessToken(), createMainMenuKeyboard());
+	                    "Общая сумма: *%s тг*\n\n" +
+	                    "Владелец бота уже получил уведомление и скоро свяжется с вами для подтверждения и оплаты.",
+	                    orderResponse.getId(),
+	                    address,
+	                    phone,
+	                    comment != null ? comment : "Нет",
+	                    orderResponse.getTotalAmount()
+	            );
+	            
+	            // 6. Отправка QR-кода, если он настроен
+	            if (bot.getPaymentQrCodeUrl() != null && !bot.getPaymentQrCodeUrl().isEmpty()) {
+	                sendPhoto(chatId, bot.getPaymentQrCodeUrl(), 
+	                          "Для оплаты используйте этот QR-код. После оплаты отправьте скриншот в чат.", 
+	                          bot.getAccessToken(), createMainMenuKeyboard());
+	            } else {
+	                sendMessage(chatId, confirmationMessage, bot.getAccessToken(), createMainMenuKeyboard());
+	            }
 
         } catch (Exception e) {
             log.error("Ошибка при создании заказа для чата {}: {}", chatId, e.getMessage());

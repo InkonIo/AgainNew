@@ -12,4 +12,6 @@ public class UpdateBotRequest {
 
     @Size(max = 255, message = "Название магазина не должно превышать 255 символов")
     private String shopName;
+
+    private String paymentQrCodeUrl;
 }

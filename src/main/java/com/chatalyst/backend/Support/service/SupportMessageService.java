@@ -18,6 +18,8 @@ import com.chatalyst.backend.Support.dto.UpdateReplyRequest;
 import com.chatalyst.backend.Support.dto.UpdateSupportMessageRequest;
 import com.chatalyst.backend.Support.dto.SupportStatsResponse;
 import com.chatalyst.backend.dto.*;
+import com.chatalyst.backend.forbusinessman.service.BusinessmanService;
+import com.chatalyst.backend.model.Order;
 import com.chatalyst.backend.security.services.NotificationService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +45,7 @@ public class SupportMessageService {
     private final SupportMessageReplyRepository supportMessageReplyRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final BusinessmanService businessmanService; // Предполагаем, что этот сервис нужен для получения владельца бота
 
     @PersistenceContext
     private EntityManager em;
@@ -50,11 +53,69 @@ public class SupportMessageService {
     public SupportMessageService(SupportMessageRepository supportMessageRepository, 
                                SupportMessageReplyRepository supportMessageReplyRepository, 
                                UserRepository userRepository,
-                               NotificationService notificationService) {
+                               NotificationService notificationService,
+                               BusinessmanService businessmanService) {
         this.supportMessageRepository = supportMessageRepository;
         this.supportMessageReplyRepository = supportMessageReplyRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
+        this.businessmanService = businessmanService;
+    }
+
+    /**
+     * Создает сообщение поддержки на основе нового заказа.
+     * Это сообщение будет отображаться в списке сообщений владельца бота.
+     * @param order Созданный заказ.
+     */
+    @Transactional
+    public void createOrderMessage(Order order) {
+        // 1. Находим владельца бота (бизнесмена)
+        User owner = order.getBot().getOwner();
+
+        // 2. Формируем текст сообщения
+        String subject = String.format("Новый заказ #%d от бота '%s'", order.getId(), order.getBot().getName());
+        String messageText = String.format(
+            "Поступил новый заказ на сумму %s %s.\n" +
+            "Клиент: %s\n" +
+            "Адрес доставки: %s\n" +
+            "Телефон: %s\n" +
+            "Комментарий: %s\n" +
+            "Состав заказа:\n%s",
+            order.getTotalAmount().toString(),
+            "TNG", // Предполагаем валюту
+            order.getUser().getEmail(),
+            order.getClientDeliveryAddress(),
+            order.getClientContactPhone(),
+            order.getClientComment() != null && !order.getClientComment().isEmpty() ? order.getClientComment() : "Нет",
+            order.getItems().stream()
+                .map(item -> String.format("- %s x %d (%.2f %s)", 
+                    item.getProductName(), 
+                    item.getQuantity(), 
+                    item.getPrice().doubleValue(), 
+                    "TNG"))
+                .collect(Collectors.joining("\n"))
+        );
+
+        // 3. Создаем SupportMessage
+        SupportMessage message = new SupportMessage();
+        message.setUser(owner); // Сообщение создается для владельца бота
+        message.setSubject(subject);
+        message.setMessage(messageText);
+        message.setPriority(MessagePriority.HIGH); // Заказ - это высокий приоритет
+        message.setStatus(MessageStatus.OPEN);
+        message.setOrderId(order.getId()); // Связываем с ID заказа
+
+        SupportMessage savedMessage = supportMessageRepository.save(message);
+        log.info("Order message created for order {}: {}", order.getId(), savedMessage.getId());
+
+        // 4. Отправляем уведомление владельцу бота о новом сообщении
+        notificationService.createNotificationForUser(
+            owner.getId(), 
+            "new_order_message", 
+            subject, 
+            "Вам поступил новый заказ. Проверьте раздел 'Сообщения'.",
+            savedMessage.getId()
+        );
     }
 
     @Transactional
@@ -92,31 +153,32 @@ public class SupportMessageService {
     }
 
     @Transactional(readOnly = true)
-    public List<SupportMessageResponse> getUserMessages(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+public List<SupportMessageResponse> getUserMessages(Long userId) {
+    User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
 
-        boolean isAdmin = user.getRoles().stream()
-                .anyMatch(role -> role.getName() == RoleName.ROLE_ADMIN);
+    boolean isAdmin = user.getRoles().stream()
+            .anyMatch(role -> role.getName() == RoleName.ROLE_ADMIN);
 
-        if (isAdmin) {
-            // Admins should not use this endpoint to get their own messages, they see all messages
-            return List.of(); // Return empty list for admins
-        }
-
-        return supportMessageRepository.findByUserIdOrderByCreatedAtDesc(userId)
-                .stream()
-                .map(SupportMessageResponse::fromEntity)
-                .collect(Collectors.toList());
+    if (isAdmin) {
+        return List.of();
     }
+
+    // ИЗМЕНЕНО: теперь возвращаем только неархивные сообщения
+    return supportMessageRepository.findActiveByUserIdOrderByCreatedAtDesc(userId)
+            .stream()
+            .map(SupportMessageResponse::fromEntity)
+            .collect(Collectors.toList());
+}
 
     @Transactional(readOnly = true)
-    public List<SupportMessageResponse> getAllMessages() {
-        return supportMessageRepository.findAllByOrderByCreatedAtDesc()
-                .stream()
-                .map(SupportMessageResponse::fromEntity)
-                .collect(Collectors.toList());
-    }
+public List<SupportMessageResponse> getAllMessages() {
+    // ИЗМЕНЕНО: теперь возвращаем только неархивные сообщения
+    return supportMessageRepository.findAllActiveOrderByCreatedAtDesc()
+            .stream()
+            .map(SupportMessageResponse::fromEntity)
+            .collect(Collectors.toList());
+}
 
     @Transactional(readOnly = true)
     public List<SupportMessageResponse> getMessagesWithFilters(
@@ -439,6 +501,89 @@ public class SupportMessageService {
                 .messagesByDate(messagesByDate)
                 .build();
     }
+
+
+    /**
+ * Архивирует сообщение пользователя (soft delete)
+ * Пользователь может архивировать только свои собственные сообщения
+ */
+@Transactional
+public SupportMessageResponse archiveMessage(Long messageId, Long userId) {
+    SupportMessage message = supportMessageRepository.findById(messageId)
+            .orElseThrow(() -> new RuntimeException("Message not found"));
+
+    User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+    // Проверяем, что пользователь архивирует свое сообщение
+    if (!message.getUser().getId().equals(userId)) {
+        throw new RuntimeException("You can only archive your own messages");
+    }
+
+    // Проверяем, не архивировано ли уже
+    if (message.getArchived()) {
+        throw new RuntimeException("Message is already archived");
+    }
+
+    message.setArchived(true);
+    message.setArchivedAt(LocalDateTime.now());
+
+    SupportMessage savedMessage = supportMessageRepository.save(message);
+    log.info("Message {} archived by user {}", messageId, userId);
+
+    return SupportMessageResponse.fromEntity(savedMessage);
+}
+
+/**
+ * Восстанавливает архивное сообщение
+ */
+@Transactional
+public SupportMessageResponse restoreMessage(Long messageId, Long userId) {
+    SupportMessage message = supportMessageRepository.findById(messageId)
+            .orElseThrow(() -> new RuntimeException("Message not found"));
+
+    User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+    // Проверяем, что пользователь восстанавливает свое сообщение
+    if (!message.getUser().getId().equals(userId)) {
+        throw new RuntimeException("You can only restore your own messages");
+    }
+
+    // Проверяем, что сообщение архивировано
+    if (!message.getArchived()) {
+        throw new RuntimeException("Message is not archived");
+    }
+
+    message.setArchived(false);
+    message.setArchivedAt(null);
+
+    SupportMessage savedMessage = supportMessageRepository.save(message);
+    log.info("Message {} restored by user {}", messageId, userId);
+
+    return SupportMessageResponse.fromEntity(savedMessage);
+}
+
+/**
+ * Получает архивные сообщения пользователя
+ */
+@Transactional(readOnly = true)
+public List<SupportMessageResponse> getArchivedMessages(Long userId) {
+    User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+    boolean isAdmin = user.getRoles().stream()
+            .anyMatch(role -> role.getName() == RoleName.ROLE_ADMIN);
+
+    if (isAdmin) {
+        return List.of(); // Админы не используют архив
+    }
+
+    return supportMessageRepository.findArchivedByUserIdOrderByArchivedAtDesc(userId)
+            .stream()
+            .map(SupportMessageResponse::fromEntity)
+            .collect(Collectors.toList());
+}
 
     // Helper methods
 

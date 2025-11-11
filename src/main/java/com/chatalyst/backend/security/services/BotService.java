@@ -24,6 +24,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.chatalyst.backend.dto.ProductResponse;
 
@@ -215,6 +216,11 @@ public class BotService {
         if (updateBotRequest.getShopName() != null) {
             existingBot.setShopName(updateBotRequest.getShopName());
         }
+        
+        // Добавляем обновление для paymentQrCodeUrl
+        if (updateBotRequest.getPaymentQrCodeUrl() != null) {
+            existingBot.setPaymentQrCodeUrl(updateBotRequest.getPaymentQrCodeUrl());
+        }
 
         // 4. Сохраняем обновленный объект в базу данных
         return botRepository.save(existingBot);
@@ -233,50 +239,50 @@ public class BotService {
 
     /**
      * Получает бота по его ID.
-     * @param botId ID бота.
-     * @return Optional с объектом Bot.
-     */
-    public Optional<Bot> getBotById(Long botId) {
-        return botRepository.findById(botId);
-    }
-
-    /**
-     * Удаляет бота.
-     * @param botId ID бота.
-     * @param userId ID пользователя, который пытается удалить бота (для проверки прав).
-     * @throws RuntimeException если бот не найден или пользователь не является владельцем.
-     */
-    @Transactional
-    public void deleteBot(Long botId, Long userId) {
-        Bot bot = botRepository.findById(botId)
-                .orElseThrow(() -> new RuntimeException("Бот не найден с ID: " + botId));
-
-        if (!bot.getOwner().getId().equals(userId)) {
-            throw new RuntimeException("У вас нет прав для удаления этого бота.");
-        }
-        
-                // Удаляем все продукты, связанные с ботом, и их изображения
-        List<ProductResponse> productsToDelete = productService.getProductsByBotId(botId, userId);
-        for (ProductResponse product : productsToDelete) {
-            if (product.getImageUrl() != null && !product.getImageUrl().isEmpty()) {
-                psObjectStorageService.deleteImage(product.getImageUrl());
-                log.info("Изображение {} удалено для продукта ID {}", product.getImageUrl(), product.getId());
-            }
-            productService.deleteProduct(product.getId(), userId);
-            log.info("Продукт ID {} удален.", product.getId());
-        }
-
-        // ИЗМЕНЕНИЕ: Удаляем Webhook из Telegram перед удалением бота из БД
-        deleteTelegramWebhook(bot.getAccessToken());
-
-        botRepository.delete(bot);
-        log.info("Бот с ID {} успешно удален.", botId);
-    }
-
-    /**
-     * Метод для удаления вебхука.
-     * @param botToken Токен Telegram бота.
-     */
+	     * @param botId ID бота.
+	     * @return Optional с объектом Bot.
+	     */
+	    public Optional<Bot> getBotById(Long botId) {
+	        return botRepository.findById(botId);
+	    }
+	
+	    /**
+	     * Удаляет бота.
+	     * @param botId ID бота.
+	     * @param userId ID пользователя, который пытается удалить бота (для проверки прав).
+	     * @throws RuntimeException если бот не найден или пользователь не является владельцем.
+	     */
+	    @Transactional
+	    public void deleteBot(Long botId, Long userId) {
+	        Bot bot = botRepository.findById(botId)
+	                .orElseThrow(() -> new RuntimeException("Бот не найден с ID: " + botId));
+	
+	        if (!bot.getOwner().getId().equals(userId)) {
+	            throw new RuntimeException("У вас нет прав для удаления этого бота.");
+	        }
+	        
+	                // Удаляем все продукты, связанные с ботом, и их изображения
+	        List<ProductResponse> productsToDelete = productService.getProductsByBotId(botId, userId);
+	        for (ProductResponse product : productsToDelete) {
+	            if (product.getImageUrl() != null && !product.getImageUrl().isEmpty()) {
+	                psObjectStorageService.deleteImage(product.getImageUrl());
+	                log.info("Изображение {} удалено для продукта ID {}", product.getImageUrl(), product.getId());
+	            }
+	            productService.deleteProduct(product.getId(), userId);
+	            log.info("Продукт ID {} удален.", product.getId());
+	        }
+	
+	        // ИЗМЕНЕНИЕ: Удаляем Webhook из Telegram перед удалением бота из БД
+	        deleteTelegramWebhook(bot.getAccessToken());
+	
+	        botRepository.delete(bot);
+	        log.info("Бот с ID {} успешно удален.", botId);
+	    }
+	
+	    /**
+	     * Метод для удаления вебхука.
+	     * @param botToken Токен Telegram бота.
+	     */
     private void deleteTelegramWebhook(String botToken) {
         log.info("Удаление Webhook для бота с токеном: {}", botToken);
         try {
@@ -319,6 +325,32 @@ public class BotService {
     // 5. Возвращаем DTO со статистикой
     return new BotStats(totalMessages, totalDialogues);
 }
+
+    /**
+     * Загружает QR-код оплаты и сохраняет его URL в настройках бота.
+     * @param botId ID бота.
+     * @param userId ID пользователя.
+     * @param file Файл QR-кода.
+     * @return URL загруженного QR-кода.
+     */
+    @Transactional
+    public String uploadPaymentQr(Long botId, Long userId, MultipartFile file) {
+        Bot bot = botRepository.findById(botId)
+                .orElseThrow(() -> new RuntimeException("Бот не найден с ID: " + botId));
+
+        if (!bot.getOwner().getId().equals(userId)) {
+            throw new RuntimeException("Нет прав на изменение настроек этого бота");
+        }
+
+        // 1. Загружаем файл в хранилище
+        String qrUrl = psObjectStorageService.uploadImage(file, "qr-codes"); // Предполагаем, что psObjectStorageService.uploadFile возвращает URL
+
+        // 2. Обновляем поле в сущности Bot
+        bot.setPaymentQrCodeUrl(qrUrl);
+        botRepository.save(bot);
+
+        return qrUrl;
+    }
 
     public void updateShopName(Long botId, Long userId, String shopName) {
     Bot bot = botRepository.findById(botId)

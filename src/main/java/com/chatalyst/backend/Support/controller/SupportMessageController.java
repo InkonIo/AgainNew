@@ -311,5 +311,69 @@ public class SupportMessageController {
                     .body(new MessageResponse("Error: " + e.getMessage()));
         }
     }
+
+    @PutMapping("/messages/{id}/archive")
+@Operation(summary = "Archive message (User only)", description = "Archive user's own support message")
+@ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Message archived successfully",
+                content = @Content(schema = @Schema(implementation = SupportMessageResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Bad request"),
+        @ApiResponse(responseCode = "403", description = "Access denied - can only archive own messages"),
+        @ApiResponse(responseCode = "404", description = "Message not found")
+})
+public ResponseEntity<?> archiveMessage(
+        @PathVariable Long id,
+        Authentication authentication) {
+    try {
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        SupportMessageResponse response = supportMessageService.archiveMessage(id, userPrincipal.getId());
+        return ResponseEntity.ok(response);
+    } catch (Exception e) {
+        log.error("Error archiving message", e);
+        return ResponseEntity.badRequest()
+                .body(new MessageResponse("Error: " + e.getMessage()));
+    }
+}
+
+@PutMapping("/messages/{id}/restore")
+@Operation(summary = "Restore archived message (User only)", description = "Restore user's archived support message")
+@ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Message restored successfully",
+                content = @Content(schema = @Schema(implementation = SupportMessageResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Bad request"),
+        @ApiResponse(responseCode = "403", description = "Access denied - can only restore own messages"),
+        @ApiResponse(responseCode = "404", description = "Message not found")
+})
+public ResponseEntity<?> restoreMessage(
+        @PathVariable Long id,
+        Authentication authentication) {
+    try {
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        SupportMessageResponse response = supportMessageService.restoreMessage(id, userPrincipal.getId());
+        return ResponseEntity.ok(response);
+    } catch (Exception e) {
+        log.error("Error restoring message", e);
+        return ResponseEntity.badRequest()
+                .body(new MessageResponse("Error: " + e.getMessage()));
+    }
+}
+
+@GetMapping("/messages/archived")
+@Operation(summary = "Get archived messages", description = "Get all archived messages for the current user")
+@ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Archived messages retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized")
+})
+public ResponseEntity<?> getArchivedMessages(Authentication authentication) {
+    try {
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        List<SupportMessageResponse> messages = supportMessageService.getArchivedMessages(userPrincipal.getId());
+        return ResponseEntity.ok(messages);
+    } catch (Exception e) {
+        log.error("Error retrieving archived messages", e);
+        return ResponseEntity.badRequest()
+                .body(new MessageResponse("Error: " + e.getMessage()));
+    }
+}
 }
 

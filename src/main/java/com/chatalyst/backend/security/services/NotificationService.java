@@ -43,8 +43,32 @@ public class NotificationService {
             order.getClientContactPhone()
         );
         
-        // Используем тип "ORDER" для фильтрации
+                // Используем тип "ORDER" для фильтрации
         return createNotificationForUser(owner, "ORDER", title, message, order.getId(), "high");
+
+    }
+
+    /**
+     * Отправляет уведомление владельцу бота о получении скриншота оплаты.
+     * @param order Объект заказа.
+     * @param clientUsername Имя пользователя клиента в Telegram.
+     * @param fileId ID файла скриншота в Telegram.
+     */
+    @Transactional
+    public Notification sendPaymentScreenshotNotification(Order order, String clientUsername, String fileId) {
+        User owner = order.getBot().getOwner();
+        String title = "Скриншот оплаты по заказу #" + order.getId() + "!";
+        String message = String.format(
+            "Клиент @%s прислал скриншот оплаты по заказу #%d. Проверьте оплату и подтвердите заказ.",
+            clientUsername,
+            order.getId()
+        );
+        
+        // Используем тип "PAYMENT_SCREENSHOT" для фильтрации
+        // fileId можно сохранить в поле messageId, если оно Long, но лучше использовать отдельное поле в Notification, 
+        // если оно есть. Пока используем order.getId() как messageId.
+        return createNotificationForUser(owner, "PAYMENT_SCREENSHOT", title, message, order.getId(), "high");
+
     }
 
     /**

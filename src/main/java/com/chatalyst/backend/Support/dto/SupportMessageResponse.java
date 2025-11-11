@@ -36,6 +36,9 @@ public class SupportMessageResponse {
     
     // Reply count
     private int replyCount;
+
+    private Boolean archived;
+    private LocalDateTime archivedAt;
     
     public static SupportMessageResponse fromEntity(SupportMessage message) {
         SupportMessageResponse response = new SupportMessageResponse();
@@ -65,7 +68,13 @@ public class SupportMessageResponse {
         
         // Reply count
         response.setReplyCount(message.getReplies().size());
+
+        // Archive info
+        response.setArchived(message.getArchived());
+        response.setArchivedAt(message.getArchivedAt());
         
         return response;
     }
+
+    
 }

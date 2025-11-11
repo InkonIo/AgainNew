@@ -6,6 +6,7 @@ import com.chatalyst.backend.dto.CreateOrderRequest;
 import com.chatalyst.backend.dto.OrderResponse;
 import com.chatalyst.backend.dto.OrderItemResponse;
 import com.chatalyst.backend.model.*;
+import com.chatalyst.backend.Support.service.SupportMessageService; // Импортируем новый сервис
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +28,7 @@ public class OrderService {
     private final UserRepository userRepository;
     private final BotRepository botRepository;
     private final NotificationService notificationService; // Для отправки уведомлений
+    private final SupportMessageService supportMessageService; // Для создания сообщения поддержки
 
     /**
      * Создает новый заказ из содержимого корзины пользователя.
@@ -82,6 +84,9 @@ public class OrderService {
 
         // 6. Отправляем уведомление владельцу бота
         notificationService.sendNewOrderNotification(savedOrder);
+
+        // 7. Создаем сообщение поддержки для владельца бота
+        supportMessageService.createOrderMessage(savedOrder);
 
         return convertToResponse(savedOrder);
     }

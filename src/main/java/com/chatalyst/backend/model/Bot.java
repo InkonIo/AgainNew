@@ -34,8 +34,10 @@ public class Bot {
     @Column(nullable = false, unique = true)
     private Long telegramBotApiId;
 
-    @Column(nullable = true)
-    private String shopName;
+    @Column(nullable = true)    private String shopName;
+
+    @Column(name = "payment_qr_code_url")
+    private String paymentQrCodeUrl;
 
     @JsonIgnore // Добавлена эта аннотация для игнорирования поля при сериализации
     @ManyToOne(fetch = FetchType.LAZY)
