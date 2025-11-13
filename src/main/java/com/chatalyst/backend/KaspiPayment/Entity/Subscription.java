@@ -17,7 +17,11 @@ public class Subscription {
     private Long id;
 
     @Column(unique = true, nullable = false)
-    private String type; // PREMIUM, STANDARD
+    private String type; // STANDARD, PREMIUM
+    
+
+    @Column(name = "duration_months", nullable = false, columnDefinition = "integer default 1")
+    private int durationInMonths; // 1, 3, 6, 12
 
     @Column(name = "bots_allowed", nullable = false)
     private int botsAllowed;

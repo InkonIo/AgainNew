@@ -26,7 +26,7 @@ public class SubscriptionController {
     // Только админ может вызывать
     @PostMapping("/admin/subscription/assign")
     public ResponseEntity<UserDTO> assignSubscription(@RequestBody SubscriptionRequestDTO request) {
-        User updatedUser = subscriptionService.assignSubscription(request.getUserId(), request.getSubscriptionType());
+        User updatedUser = subscriptionService.assignSubscription(request.getUserId(), request.getSubscriptionType(), request.getDurationInMonths());
         
         // Конвертируем User в UserDTO
         UserDTO userDTO = convertToDTO(updatedUser);

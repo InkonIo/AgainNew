@@ -15,10 +15,24 @@ public class RoleInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        // Базовые роли
         createRoleIfNotExists(RoleName.ROLE_USER);
-        createRoleIfNotExists(RoleName.ROLE_STANDARD);
-        createRoleIfNotExists(RoleName.ROLE_PREMIUM);
         createRoleIfNotExists(RoleName.ROLE_ADMIN);
+        
+        // Роли Standard подписки
+        createRoleIfNotExists(RoleName.ROLE_STANDARD_1M);
+        createRoleIfNotExists(RoleName.ROLE_STANDARD_3M);
+        createRoleIfNotExists(RoleName.ROLE_STANDARD_6M);
+        createRoleIfNotExists(RoleName.ROLE_STANDARD_12M);
+        
+        // Роли Premium подписки
+        createRoleIfNotExists(RoleName.ROLE_PREMIUM_1M);
+        createRoleIfNotExists(RoleName.ROLE_PREMIUM_3M);
+        createRoleIfNotExists(RoleName.ROLE_PREMIUM_6M);
+        createRoleIfNotExists(RoleName.ROLE_PREMIUM_12M);
+        
+        // Роль для скидки после пробного месяца
+        createRoleIfNotExists(RoleName.ROLE_AFTERMONTH_DISCOUNT);
     }
 
     private void createRoleIfNotExists(RoleName roleName) {

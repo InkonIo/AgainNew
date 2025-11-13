@@ -62,8 +62,9 @@ public class SupportMessage {
 
     // === НОВЫЕ ПОЛЯ ДЛЯ АРХИВАЦИИ ===
     
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "boolean default false")
     private Boolean archived = false;
+
     
     @Column(name = "archived_at")
     private LocalDateTime archivedAt;

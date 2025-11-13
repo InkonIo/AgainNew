@@ -73,9 +73,14 @@ private Integer botsAllowed = 0; // Сколько ботов можно соз�
 @Column(nullable = false, length = 50, columnDefinition = "varchar(50) default 'USER'")
 private String supportLevel = "USER"; // USER, BASIC, PRIORITY
 
+@Column(columnDefinition = "TIMESTAMP WITHOUT TIME ZONE")
 private LocalDateTime subscriptionStart; // Дата начала тарифа
 
+    @Column(columnDefinition = "TIMESTAMP WITHOUT TIME ZONE")
 private LocalDateTime subscriptionEnd; // Дата окончания тарифа
+
+	@Column(nullable = false, columnDefinition = "boolean default false")
+	private Boolean isTrialCompleted = false; // Завершил ли пользователь пробный месяц (для скидки)
 // ============================
 
 @Column(nullable = false)
